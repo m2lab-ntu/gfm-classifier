@@ -15,7 +15,11 @@
 ## Location
 
 - TWCC: `/work/ymj1123ntu/gfm_embedding_classification/data/labeled_multi_level_generated/genomes/` (~10 GB)
-- Local machine: (Kraken2 DB only — see local STATUS.md)
+- Local machine (Kraken2 only):
+  - UMGS source: `/mnt/MetaTransformer_data/UMGS/` (1.3 GB, 1,952 `.gz` files)
+  - HGR source: `/mnt/MetaTransformer_data/hgr/` (562 MB, 553 `.gz` files)
+  - Kraken2 DB: `/nas2/hierachical_test/kraken2_db/` (7.2 GB, 1,316 species)
+  - Decompressed `.fna` in DB: `/nas2/hierachical_test/kraken2_db/library/added/`
 
 ## Notes
 
