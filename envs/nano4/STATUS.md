@@ -1,31 +1,65 @@
 # Nano4 — Status
 
-**Last updated**: 2026-06-01
-**Host**: `nano4.nchc.org.tw`
-**GPU**: H200
+**Last updated**: 2026-06-02
+**Host**: `25a-lgn04` (login node), compute nodes: `25a-hgpn*`
 **Service**: Free 1-month trial (target: cover 6/2026 thesis-finalisation + paper-prep)
 
-## Migration checklist
+## Hardware
 
-- [ ] SSH access verified (`ssh ymj1123ntu@nano4.nchc.org.tw`)
-- [ ] `conda` available, create `gfm` env
-- [ ] `git clone` this repo
-- [ ] Install Python deps (torch, transformers, peft, etc.)
-- [ ] Sync training data (`reads_50M.fa`, `labels_50M.tsv`) from TWCC via `rsync`
-- [ ] Sync test data (`reads_100K.fa`, `labels_100K.tsv`, `in_db_mask.npy`)
-- [ ] Sync NT-v2 model checkpoints (best.pt for genus v9, species sp_v4)
-- [ ] Sync DNABERT-2 50M `last.pt` (to resume training)
-- [ ] Sync MT models (from Taiwana-2 — for speed benchmark)
-- [ ] Verify SLURM commands (may differ from Nano5)
-- [ ] Test one short job (eval on 100K test) to confirm pipeline works
+| Component | Detail |
+|---|---|
+| Login node GPU | NVIDIA H100 NVL, 95830 MiB |
+| Compute node GPU | NVIDIA H200, 143771 MiB HBM3e |
+| CUDA (available) | 12.6 / 13.0 via module |
+| Driver | 580.65.06 |
 
-## Paths (placeholder — fill in after first ssh)
+## Slurm
+
+| Field | Value |
+|---|---|
+| Account | MST114550 |
+| Partition: dev | max 1h, H200 |
+| Partition: normal | max 12h, min 64 GPUs, H200 |
+
+## Environment
 
 | Purpose | Path |
 |---|---|
-| Repo clone | `/work/ymj1123ntu/gfm-classifier/` (TBD) |
-| Training data | TBD |
-| HF cache | TBD |
+| Repo clone | `/work/ymj1123ntu/gfm-classifier` |
+| Conda env | `gfm` (Python 3.11) |
+| PyTorch | 2.5.1+cu121 |
+| Data path | `/work/ymj1123ntu/data/` |
+| Checkpoint path | `/work/ymj1123ntu/checkpoints/` |
+| HF cache | `/work/ymj1123ntu/.cache/huggingface` |
+
+## Migration checklist
+
+- [x] SSH access verified (`ssh ymj1123ntu@nano4.nchc.org.tw`)
+- [x] `conda` available, `gfm` env created (Python 3.11)
+- [x] `git clone` this repo
+- [x] Install Python deps (torch 2.5.1+cu121, transformers, peft, etc.)
+- [ ] Sync training data (`reads_50M.fa`, `labels_50M.tsv`) from Nano5 via `sync_from_nano5.sh`
+- [ ] Sync test data (`reads_100K.fa`, `labels_100K.tsv`, `in_db_mask.npy`)
+- [ ] Sync NT-v2 model checkpoints (`nt_token_species_v4_50M_best.pt`)
+- [ ] Sync DNABERT-2 50M `last.pt` (to resume training)
+- [ ] Sync MT models (from Taiwana-2 — for speed benchmark)
+- [x] Verify SLURM commands — `slurm/sanity_check_nano4.sh` ready
+- [ ] Test one short job (eval on 100K test) to confirm pipeline works
+
+## Data sync status
+
+| File | Status |
+|---|---|
+| `reads_100K.fa` | missing |
+| `labels_100K.tsv` | missing |
+| `labels_50M.tsv` | missing |
+| `nt_token_species_v4_50M_best.pt` | missing |
+
+## Sanity check
+
+**Status**: pending (data sync required)
+
+Slurm script: `slurm/sanity_check_nano4.sh`
 
 ## Planned tasks (when migration complete)
 
@@ -36,5 +70,7 @@
 
 ## Notes
 
-- H200 has 141 GB HBM3e (vs H100's 80 GB) → can fit larger batches; consider increasing eval_batch_size
-- Free 1-month → use aggressively, deprioritize TWCC budget
+- nano5.nchc.org.tw requires MFA for SSH; direct `rsync` is blocked — use `sync_from_nano5.sh`
+- H200 has 143 GB HBM3e (vs H100 NVL 95 GB on login node) — increase `eval_batch_size` accordingly
+- Free 1-month trial — use aggressively, deprioritize TWCC budget
+- **Setup date**: 2026-06-02
