@@ -24,6 +24,10 @@
 - MT 6-mer flat / hier @ 50M: 9.0% / 6.4% ✓
 - MT 13-mer / 6-mer genus @ 50M: 94.25% / 48.76% ✓
 - **MT 13-mer hier species checkpoint corrupted** (Taiwana-2, val_loss=9.29 @ batch 10K) ✗
+- **MT 13-mer per-genus pipeline (Exp F, 81 genera): 55.93% all-reads / 57.20% routed-only** ✓
+  - +2.23 pp over MT 13-mer flat (53.7%) → 3rd data point validating router-quality theorem
+  - File: `small_predictions/mt_per_genus_13mer_preds_100K.npz` (2026-06-01)
+  - ⚠ Read order NOT aligned to reads_100K.fa (per-genus concat artifact); cannot apply in_db_mask yet
 
 ### DNABERT-1 / DNABERT-2
 - 5M (LoRA, RC TTA): 61.78% / 58.88% ✓
