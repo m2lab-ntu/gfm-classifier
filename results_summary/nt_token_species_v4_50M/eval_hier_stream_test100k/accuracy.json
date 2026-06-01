@@ -1,0 +1,5 @@
+{
+  "mode": "nt_species_hier_streaming_test100k",
+  "accuracy": 0.15764,
+  "n_reads": 100000
+}

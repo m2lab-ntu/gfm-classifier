@@ -1,0 +1,71 @@
+# Model checkpoints (track in data_manifest/checkpoints.md instead)
+*.pt
+*.ckpt
+*.pth
+best.pt
+last.pt
+
+# Training data + reference genomes (track in data_manifest/training_data.md)
+*.fa
+*.fasta
+*.fna
+*.fastq
+*.fastq.gz
+*.fq.gz
+
+# Large predictions (>10 MB) — small ones can be force-added with `git add -f`
+*.npz
+!small_predictions/*.npz
+!docs/**/*.npz
+
+# Compressed archives
+*.tar.gz
+*.tgz
+*.zip
+
+# SLURM artifacts
+slurm-*.out
+slurm-*.err
+
+# Results directory — only metrics.json gets pulled to results_summary/
+results/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Conda / venv
+env/
+venv/
+.conda/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / wandb / tensorboard
+*.log
+wandb/
+runs/
+lightning_logs/
+
+# Aux files
+*.aux
+*.toc
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Local notes (uncomment if you want)
+# notes_local/

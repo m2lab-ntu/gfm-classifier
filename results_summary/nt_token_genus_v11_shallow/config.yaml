@@ -1,0 +1,42 @@
+data:
+  fasta_path: /work/ymj1123ntu/gfm_embedding_classification/data/balanced_50M/reads_50M.fa
+  labels_path: /work/ymj1123ntu/gfm_embedding_classification/data/balanced_50M/labels_50M.tsv
+  max_token_length: 32
+  rc_augment: true
+  seed: 42
+  task: genus
+  val_ratio: 0.1
+model:
+  backbone: InstaDeepAI/nucleotide-transformer-v2-500m-multi-species
+  head_config:
+    dropout: 0.15
+    hidden_dim: 512
+    num_attention_heads: 4
+  head_type: attention_pool
+  max_seq_len: 128
+  shallow_config:
+    d_ff: 512
+    d_model: 128
+    dropout: 0.1
+    nhead: 2
+    num_layers: 1
+  type: shallow_transformer
+output:
+  dir: /work/ymj1123ntu/token_level_gfm_classifier/results/nt_token_genus_v11_shallow
+training:
+  amp: true
+  backbone_lr: 0.0005
+  batch_size: 512
+  class_weights: false
+  early_stopping_patience: 5
+  eval_batch_size: 1024
+  gradient_accumulation_steps: 1
+  label_smoothing: 0.0
+  learning_rate: 0.0005
+  max_class_weight: 10.0
+  max_grad_norm: 5.0
+  num_epochs: 15
+  num_workers: 4
+  phase1_epochs: 0
+  warmup_ratio: 0.05
+  weight_decay: 0.02

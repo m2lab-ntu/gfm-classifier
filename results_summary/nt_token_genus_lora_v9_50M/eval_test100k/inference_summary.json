@@ -1,0 +1,6 @@
+{
+  "num_reads": 100000,
+  "num_classes": 120,
+  "read_accuracy": 0.66605,
+  "checkpoint": "/work/ymj1123ntu/token_level_gfm_classifier/results/nt_token_genus_lora_v9_50M/best.pt"
+}

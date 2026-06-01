@@ -1,0 +1,64 @@
+{
+  "system_info": {
+    "hostname": "hgpn03",
+    "os": "Linux-4.18.0-513.24.1.el8_9.x86_64-x86_64-with-glibc2.28",
+    "cpu_count_physical": 112,
+    "cpu_count_logical": 112,
+    "ram_total_gb": 2015.03,
+    "gpu_name": "NVIDIA H100 80GB HBM3",
+    "gpu_vram_total_gb": 79.1,
+    "gpu_compute_capability": "9.0",
+    "cuda_version": "12.8",
+    "pytorch_version": "2.10.0+cu128"
+  },
+  "timing": {
+    "total_wall_time_sec": 53721.6,
+    "total_wall_time_str": "14:55:21",
+    "start": "2026-04-20T00:36:10.955930",
+    "end": "2026-04-20T15:31:32.573083",
+    "num_epochs": 2,
+    "avg_epoch_sec": 25313.1
+  },
+  "gpu_memory": {
+    "pytorch_peak_allocated_gb": 14.37,
+    "nvidia_smi_peak_used_mb": 15580.0,
+    "nvidia_smi_peak_used_gb": 15.21,
+    "vram_total_gb": 79.1,
+    "vram_utilization_pct": 19.2
+  },
+  "gpu_compute": {
+    "gpu_utilization_mean_pct": 90.6,
+    "gpu_utilization_median_pct": 95.0,
+    "gpu_utilization_min_pct": 0.0,
+    "gpu_utilization_max_pct": 99.0,
+    "gpu_utilization_std_pct": 18.4
+  },
+  "ram": {
+    "ram_rss_mean_gb": 44.65,
+    "ram_rss_max_gb": 88.9,
+    "ram_rss_min_gb": 0.65,
+    "peak_rss_gb": 88.9,
+    "system_total_gb": 2015.03,
+    "ram_utilization_pct": 4.4
+  },
+  "epoch_details": [
+    {
+      "epoch": 29,
+      "duration_sec": 25300.7,
+      "duration_str": "7:01:40",
+      "train_samples": 45000000,
+      "throughput_reads_per_sec": 1778.6
+    },
+    {
+      "epoch": 30,
+      "duration_sec": 25325.5,
+      "duration_str": "7:02:05",
+      "train_samples": 45000000,
+      "throughput_reads_per_sec": 1776.9
+    }
+  ],
+  "sampling": {
+    "interval_sec": 30.0,
+    "total_snapshots": 1750
+  }
+}

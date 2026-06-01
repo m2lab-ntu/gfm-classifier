@@ -1,0 +1,22 @@
+{
+  "micro_accuracy": 0.6707274,
+  "balanced_accuracy": 0.3990517233716794,
+  "f1_weighted": 0.6561246453378625,
+  "f1_macro": 0.44824402557215365,
+  "precision_weighted": 0.6635793345409242,
+  "recall_weighted": 0.6707274,
+  "precision_macro": 0.586656266336233,
+  "recall_macro": 0.3990517233716794,
+  "num_classes": 120,
+  "num_classes_present": 120,
+  "num_classes_f1_zero": 0,
+  "top3_accuracy": 0.8440406,
+  "top5_accuracy": 0.9002808,
+  "top10_accuracy": 0.9524948,
+  "reads_per_sec": 2584.2232731345293,
+  "avg_latency_ms": 0.38696346805477516,
+  "checkpoint_epoch": 30,
+  "max_token_length": 32,
+  "task": "genus",
+  "rc_tta": true
+}

@@ -1,0 +1,49 @@
+data:
+  fasta_path: /work/ymj1123ntu/gfm_embedding_classification/data/balanced_50M/reads_50M.fa
+  kmer_preprocess:
+    k: 6
+    stride: 1
+  labels_path: /work/ymj1123ntu/gfm_embedding_classification/data/balanced_50M/labels_50M.tsv
+  max_token_length: 160
+  rc_augment: true
+  seed: 42
+  task: genus
+  val_ratio: 0.1
+model:
+  backbone: zhihan1996/DNA_bert_6
+  backbone_loader: mlm
+  freeze_backbone: false
+  gradient_checkpointing: true
+  head_config:
+    dropout: 0.15
+    hidden_dim: 512
+    num_attention_heads: 4
+  head_type: attention_pool
+  lora_alpha: 32
+  lora_dropout: 0.05
+  lora_r: 16
+  lora_target_modules:
+  - query
+  - key
+  - value
+  trust_remote_code: false
+  use_lora: true
+output:
+  dir: /work/ymj1123ntu/token_level_gfm_classifier/results/dnabert_token_genus_50M
+training:
+  amp: true
+  backbone_lr: 3.0e-05
+  batch_size: 128
+  class_weights: false
+  early_stopping_patience: 5
+  eval_batch_size: 256
+  gradient_accumulation_steps: 1
+  label_smoothing: 0.0
+  learning_rate: 0.0005
+  max_class_weight: 10.0
+  max_grad_norm: 5.0
+  num_epochs: 30
+  num_workers: 4
+  phase1_epochs: 0
+  warmup_ratio: 0.05
+  weight_decay: 0.02

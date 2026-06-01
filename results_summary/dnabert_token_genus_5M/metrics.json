@@ -1,0 +1,17 @@
+{
+  "task": "genus",
+  "backbone": "zhihan1996/DNA_bert_6",
+  "head_type": "attention_pool",
+  "use_lora": true,
+  "val_accuracy": 0.612004,
+  "val_f1_weighted": 0.5944603178900479,
+  "best_epoch": 30,
+  "total_epochs_trained": 30,
+  "reads_per_sec": 4471.299086117216,
+  "avg_latency_ms": 0.22364864902570844,
+  "peak_gpu_memory_gb": 2.546752512,
+  "total_params": 91123832,
+  "trainable_params": 2523512,
+  "total_training_time_sec": 126328.89461040497,
+  "training_time_str": "1 day, 11:05:28"
+}

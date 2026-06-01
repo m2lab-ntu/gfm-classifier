@@ -1,0 +1,17 @@
+{
+  "task": "genus",
+  "backbone": "InstaDeepAI/nucleotide-transformer-v2-500m-multi-species",
+  "head_type": "attention_pool",
+  "use_lora": true,
+  "val_accuracy": 0.6628532,
+  "val_f1_weighted": 0.6484954046674778,
+  "best_epoch": 30,
+  "total_epochs_trained": 30,
+  "reads_per_sec": 5160.199579099232,
+  "avg_latency_ms": 0.19379095414262265,
+  "peak_gpu_memory_gb": 15.432439808,
+  "total_params": 498623561,
+  "trainable_params": 5539448,
+  "total_training_time_sec": 50635.06877160072,
+  "training_time_str": "14:03:55"
+}

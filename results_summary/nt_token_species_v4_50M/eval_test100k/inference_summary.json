@@ -1,0 +1,6 @@
+{
+  "num_reads": 100000,
+  "num_classes": 1535,
+  "read_accuracy": 0.17827,
+  "checkpoint": "/work/ymj1123ntu/token_level_gfm_classifier/results/nt_token_species_v4_50M/best.pt"
+}

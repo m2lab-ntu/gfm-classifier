@@ -1,0 +1,43 @@
+{
+  "n_reads": 100000,
+  "num_species": 1535,
+  "genus_accuracy": 0.65971,
+  "modes": [
+    {
+      "name": "Per-genus (predicted v9)",
+      "top1": 0.15597,
+      "top5": 0.31352,
+      "top10": 0.36902,
+      "f1_macro": 0.15187432031854753,
+      "f1_zero_classes": 363,
+      "n_present_classes": 1535
+    },
+    {
+      "name": "Per-genus (oracle genus)",
+      "top1": 0.295,
+      "top5": 0.56972,
+      "top10": 0.66012,
+      "f1_macro": 0.28298504839539584,
+      "f1_zero_classes": 332,
+      "n_present_classes": 1535
+    },
+    {
+      "name": "Per-genus+subgenus (predicted v9)",
+      "top1": 0.14262,
+      "top5": 0.29035,
+      "top10": 0.34524,
+      "f1_macro": 0.13865383768448172,
+      "f1_zero_classes": 472,
+      "n_present_classes": 1535
+    },
+    {
+      "name": "Per-genus+subgenus (oracle genus)",
+      "top1": 0.27619,
+      "top5": 0.53867,
+      "top10": 0.62808,
+      "f1_macro": 0.2622481054962079,
+      "f1_zero_classes": 436,
+      "n_present_classes": 1535
+    }
+  ]
+}

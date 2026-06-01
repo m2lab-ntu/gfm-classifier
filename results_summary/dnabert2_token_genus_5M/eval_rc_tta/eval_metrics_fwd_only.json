@@ -1,0 +1,16 @@
+{
+  "micro_accuracy": 0.573496,
+  "balanced_accuracy": 0.27061135133651804,
+  "f1_weighted": 0.5495133900013639,
+  "f1_macro": 0.30783320608075576,
+  "precision_weighted": 0.5563486159159221,
+  "recall_weighted": 0.573496,
+  "precision_macro": 0.44880942288855563,
+  "recall_macro": 0.27061135133651804,
+  "num_classes": 120,
+  "num_classes_present": 120,
+  "num_classes_f1_zero": 3,
+  "top3_accuracy": 0.76981,
+  "top5_accuracy": 0.84403,
+  "top10_accuracy": 0.919828
+}
