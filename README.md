@@ -54,4 +54,4 @@ and are not in this repo. See [`data_manifest/`](./data_manifest/) for paths + s
 
 ## Author
 
-楊明儒 (Ming-Ju Yang) · 國立臺灣大學資工所碩二
+楊明儒 (Ming-Ju Yang) · 國立臺灣大學生醫電資所碩二
