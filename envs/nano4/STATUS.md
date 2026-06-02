@@ -1,6 +1,6 @@
 # Nano4 — Status
 
-**Last updated**: 2026-06-02
+**Last updated**: 2026-06-02 (sanity check run, FAILED — see below)
 **Host**: `25a-lgn04` (login node), compute nodes: `25a-hgpn*`
 **Service**: Free 1-month trial (target: cover 6/2026 thesis-finalisation + paper-prep)
 
@@ -38,26 +38,52 @@
 - [x] `conda` available, `gfm` env created (Python 3.11)
 - [x] `git clone` this repo
 - [x] Install Python deps (torch 2.5.1+cu121, transformers, peft, etc.)
-- [ ] Sync training data (`reads_50M.fa`, `labels_50M.tsv`) from Nano5 via `sync_from_nano5.sh`
-- [ ] Sync test data (`reads_100K.fa`, `labels_100K.tsv`, `in_db_mask.npy`)
-- [ ] Sync NT-v2 model checkpoints (`nt_token_species_v4_50M_best.pt`)
+- [x] Sync training data (`reads_50M.fa`, `labels_50M.tsv`) from Nano5 via `sync_from_nano5.sh`
+- [x] Sync test data (`reads_100K.fa`, `labels_100K.tsv`, `in_db_mask.npy`)
+- [x] Sync NT-v2 model checkpoints (`nt_token_species_v4_50M_best.pt`)
 - [ ] Sync DNABERT-2 50M `last.pt` (to resume training)
 - [ ] Sync MT models (from Taiwana-2 — for speed benchmark)
 - [x] Verify SLURM commands — `slurm/sanity_check_nano4.sh` ready
-- [ ] Test one short job (eval on 100K test) to confirm pipeline works
+- [ ] Test one short job (eval on 100K test) to confirm pipeline works — **BLOCKED** (see Sanity check below)
 
 ## Data sync status
 
-| File | Status |
-|---|---|
-| `reads_100K.fa` | missing |
-| `labels_100K.tsv` | missing |
-| `labels_50M.tsv` | missing |
-| `nt_token_species_v4_50M_best.pt` | missing |
+| File | Status | Size |
+|---|---|---|
+| `reads_100K.fa` | present | 19 MB |
+| `labels_100K.tsv` | present | 7.2 MB |
+| `labels_50M.tsv` | present | 3.7 GB |
+| `nt_token_species_v4_50M_best.pt` | present | 1.9 GB |
 
 ## Sanity check
 
-**Status**: pending (data sync required)
+**Status**: FAILED — `ModuleNotFoundError: No module named 'heads'`
+
+| Field | Value |
+|---|---|
+| Slurm job | 69367 |
+| Node | 25a-hgpn071 |
+| GPU | NVIDIA H200, 143771 MiB |
+| Start time | Tue Jun  2 10:54:37 CST 2026 |
+| End time | Tue Jun  2 10:54:56 CST 2026 |
+| Elapsed | ~19 s (crashed at import) |
+| read_accuracy | N/A — inference did not run |
+| TWCC baseline | 17.83% (0.17827) |
+| Diff from baseline | N/A |
+| Verdict | BLOCKED — fix import error first |
+
+**Error (stderr)**:
+```
+File "/work/ymj1123ntu/gfm-classifier/scripts/run_nt_species_test100k.py", line 34, in <module>
+    from model import create_model
+  File "/work/ymj1123ntu/gfm-classifier/scripts/model.py", line 25, in <module>
+    from heads import create_head
+ModuleNotFoundError: No module named 'heads'
+```
+
+**Root cause**: `heads.py` is not on `sys.path` when the job runs on the compute node. The script imports `heads` as a bare module name but the working directory or `PYTHONPATH` does not include the `scripts/` directory.
+
+**Fix needed**: Add `sys.path.insert(0, os.path.dirname(__file__))` at the top of `scripts/model.py`, or set `PYTHONPATH=$PYTHONPATH:/work/ymj1123ntu/gfm-classifier/scripts` in the Slurm script.
 
 Slurm script: `slurm/sanity_check_nano4.sh`
 
