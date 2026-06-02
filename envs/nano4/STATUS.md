@@ -1,6 +1,6 @@
 # Nano4 — Status
 
-**Last updated**: 2026-06-02 (sanity check run, FAILED — see below)
+**Last updated**: 2026-06-02 (sanity check run x2, both FAILED — see below)
 **Host**: `25a-lgn04` (login node), compute nodes: `25a-hgpn*`
 **Service**: Free 1-month trial (target: cover 6/2026 thesis-finalisation + paper-prep)
 
@@ -44,7 +44,7 @@
 - [ ] Sync DNABERT-2 50M `last.pt` (to resume training)
 - [ ] Sync MT models (from Taiwana-2 — for speed benchmark)
 - [x] Verify SLURM commands — `slurm/sanity_check_nano4.sh` ready
-- [ ] Test one short job (eval on 100K test) to confirm pipeline works — **BLOCKED** (see Sanity check below)
+- [ ] Test one short job (eval on 100K test) to confirm pipeline works — **BLOCKED** (see Sanity check below, 2 attempts failed)
 
 ## Data sync status
 
@@ -56,6 +56,41 @@
 | `nt_token_species_v4_50M_best.pt` | present | 1.9 GB |
 
 ## Sanity check
+
+### Attempt 2 — Job 69428 (2026-06-02)
+
+**Status**: FAILED — `ImportError: cannot import name 'find_pruneable_heads_and_indices'`
+
+| Field | Value |
+|---|---|
+| Slurm job | 69428 |
+| Node | 25a-hgpn030 |
+| GPU | NVIDIA H200, 143771 MiB |
+| Start time | Tue Jun  2 11:15:57 CST 2026 |
+| End time | Tue Jun  2 11:17:16 CST 2026 |
+| Elapsed | ~1 min 20 s (crashed during model load) |
+| batch_size | 1024 |
+| read_accuracy | N/A — inference did not run |
+| TWCC baseline | 17.83% (0.17827) |
+| Diff from baseline | N/A |
+| Verdict | BLOCKED — fix `transformers` version incompatibility |
+
+**Error (stderr)**:
+```
+File ".../modeling_esm.py", line 37, in <module>
+    from transformers.pytorch_utils import find_pruneable_heads_and_indices, prune_linear_layer
+ImportError: cannot import name 'find_pruneable_heads_and_indices' from 'transformers.pytorch_utils'
+```
+
+**Root cause**: The HuggingFace model's custom `modeling_esm.py` (cached revision `06615c1`) imports `find_pruneable_heads_and_indices` from `transformers.pytorch_utils`, but this function was removed in `transformers >= 4.36`. The `gfm` conda env has a newer `transformers` version that dropped it.
+
+**Fix needed** (pick one):
+1. Downgrade `transformers` in the `gfm` env: `pip install transformers==4.35.2`
+2. Or delete the cached model revision and pin to an older commit that uses a compatible `modeling_esm.py`.
+
+---
+
+### Attempt 1 — Job 69367 (2026-06-02)
 
 **Status**: FAILED — `ModuleNotFoundError: No module named 'heads'`
 
@@ -83,7 +118,7 @@ ModuleNotFoundError: No module named 'heads'
 
 **Root cause**: `heads.py` is not on `sys.path` when the job runs on the compute node. The script imports `heads` as a bare module name but the working directory or `PYTHONPATH` does not include the `scripts/` directory.
 
-**Fix needed**: Add `sys.path.insert(0, os.path.dirname(__file__))` at the top of `scripts/model.py`, or set `PYTHONPATH=$PYTHONPATH:/work/ymj1123ntu/gfm-classifier/scripts` in the Slurm script.
+**Fix applied**: Added `sys.path.insert(0, os.path.dirname(__file__))` at the top of `scripts/model.py` (fixed before attempt 2, but attempt 2 hit the `transformers` version issue).
 
 Slurm script: `slurm/sanity_check_nano4.sh`
 
