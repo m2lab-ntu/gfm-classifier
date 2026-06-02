@@ -98,76 +98,76 @@ MT 13-mer 對所有 reads 都給 prediction，所以在 low-cardinality task 反
 
 ---
 
-## Slide 7 — Blocker · TWCC Budget vs Nano4 Unblock
+## Slide 7 — Blocker · TWCC Budget vs Nano4 Partition Rules
 
-這張是這週狀況最大變化的一張。**雙 banner**：
+這張是這次最重要的「重新評估」slide。
 
-**紅** · TWCC (Nano5) wallet -802.5 點，5/30 開始無法 sbatch 新 job
-**綠** · Nano4 H200 **免費 1 個月**，repo 已 clone、env 已 setup、data 已 rsync，但 sanity check 卡住
+**上方雙 banner**：
+- 紅 · TWCC (Nano5) wallet -802.5 點，5/30 開始無法 sbatch 新 job
+- 綠 · Nano4 H200 **免費 1 個月**，220 nodes × 8 H200 = 1,760 顆 GPU 的大 cluster
 
-三欄分析：
+**Nano4 Slurm partition 表（重點）**：
 
-**綠 · Done (no GPU)**:
-- GitHub repo 已 publish
-- 4 個 env STATUS.md 都填好
-- Thesis 139 pp 含 Table 4.30
-- Per-genus 13-mer (55.93%) 拿到
+| Partition | Max time | Min GPU | 用途 |
+|---|---|---|---|
+| `dev` | **1 hr** | 1 GPU OK (no limit) | inference / benchmark / eval / realign ✓ |
+| `normal` | 12 hr | **min 64 GPU (8 nodes)** | 訓練 — 但要 DDP-ported 才能跑 ⚠ |
 
-**藍 · In progress on Nano4**:
-- Env setup (conda + deps + data) ✓
-- Sanity check ✗ (transformers 版本不對)
-- 需要：降級 transformers 到 4.35.2
-- 需要：sync DNABERT-2 last.pt 來 resume
+兩個 partition 每位 user 各 5 running + 5 pending。
 
-**金 · Once Nano4 unblocked**:
-- DNABERT-2 50M resume (36 hr H200)
-- Speed/memory benchmark (3 hr)
-- HMP real-dataset (3 hr)
-- Per-genus 13-mer realign
+**底下金色 box · 對我們 pipeline 的影響（這是這頁的核心）**：
 
-下面紅色 takeaway: **TWCC 預算問題用 Nano4 解決，不需要老師加值**。
+1. **Inference / eval / sample-level benchmark**（NT-v2、MT、DNABERT-2 eval）— 全部塞得進 dev 1 hr 上限 ✓
+2. **DNABERT-2 50M resume** — 單 GPU、用 dev 接力 resubmit ~3-4 天 wall clock（auto-resume 已內建）
+3. **258M training（如果要做）**— **需要 DDP port，1-2 天工程**，然後 64 H200 上 ~3 hr；OR 不可行
+
+關鍵句：**Nano4 normal partition 要 64 GPU 起跳，我們現有單 GPU 訓練 script 跑不上去**。要嘛接受 dev 1 hr 接力，要嘛改寫成 DDP 分散式。
+
+這個 partition 限制完全改變 258M 跟其他訓練任務的可行性評估。Slide 8 跟 9 會展開。
 
 ---
 
-## Slide 8 — 6 Decisions · Status Update
+## Slide 8 — 6 Decisions · Status Update (含 Nano4 重新評估)
 
-5/28 列的 6 個 decision points，今天 status:
+5/28 列的 6 個 decision points，套用 Nano4 partition 限制後更新：
 
-- **Q1** (DNABERT-2 resubmit): GREEN — 計畫**搬到 Nano4 H200 跑**（不用 TWCC 加值），等 Nano4 sanity check 解決即可
-- **Q2** (DNABERT-1 50M 取消): RED — 維持取消建議，5M 數據 + 訓練成本論證已足
-- **Q3** (MT 13-mer hier 重訓): ORANGE — 待老師決定（thesis 已標 N/A）
-- **Q4** (Speed benchmark): GREEN — 改在 Nano4 統一 H200 上做（vs 之前 TWCC）
-- **Q5** (258M training): RED — 維持不做建議，用 log-fit 外推取代
-- **Q6** (HMP real-dataset): GREEN — Nano4 sanity check 後排隊執行
+- **Q1** (DNABERT-2 50M resume): GREEN — Nano4 dev partition 36 個 1 hr job 接力（auto-resume）→ ~3-4 天 wall clock，**不需改 code**
+- **Q2** (DNABERT-1 50M 取消): RED — Nano4 dev 接力的話 5× 慢於 DNABERT-2，要 ~10 週 wall clock，**確認取消**
+- **Q3** (MT 13-mer hier 重訓): ORANGE — 跟 Nano4 partition 無關（在 Taiwana-2 V100 上跑），等老師決定
+- **Q4** (Speed/memory benchmark): GREEN — inference 在 Nano4 dev (1 hr 綽綽有餘)，不需 DDP
+- **Q5** (258M training): ORANGE — **重新評估！** 從「18 天 wall clock 不可行」變成「DDP port 1-2 天工程 + ~3 hr 訓練可行」，但**+4.2 pp 仍不影響結論**——值不值得？
+- **Q6** (HMP real-dataset): GREEN — inference 在 Nano4 dev，不需 DDP
 
-關鍵變化：**Nano4 出現讓 Q1、Q4、Q6 從「卡在預算」變成「卡在 Nano4 sanity check」**，
-而 sanity check 是 1 小時就能解的工程問題，不是策略問題。
+**Q5 的重新評估是這頁重點**。原本我們的反對理由是「太久」，現在 partition 細節改變了 → 變成「engineering 成本 1-2 天，但科學價值未變」。要老師重新判斷是不是值得花這 1-2 天。
 
 ---
 
-## Slide 9 — Recommended Priorities · Next 2 Weeks
+## Slide 9 — Recommended Priorities · 分四層（依 Nano4 partition 適用性）
 
-按算力需求分三層。
+按「能不能跑、要多少工程」分四層：
 
-**綠 · Immediate (CPU only)**:
+**綠 · Now (Taiwana-2 / CPU — 不用 Nano4)**:
 - Per-genus 13-mer (Exp F) 在 Taiwana-2 重跑（read order 對齊）→ 補進 Table 4.30
 - Thesis figure 重生（用新 aligned MT 數字 53.7%、94.25%）
-- Thesis Section 4.13 校稿
-- MT 13-mer hier 重訓 (Q3 decision)
+- Section 4.13 校稿 · 選擇性 MT 13-mer hier 重訓 (Q3)
 
-這些都不需要 Nano4，可以立刻做。
+立刻可做，不卡 Nano4。
 
-**金 · After Nano4 unblock (~45 GPU-hr, FREE)**:
-- DNABERT-2 50M resume from epoch 17 (36 hr H200)
-- Migrate MT models from Taiwana-2 → Nano4
-- Speed/memory unified benchmark on H200 (3 hr)
-- HMP mock community inference (3 hr)
+**藍 · Fits Nano4 dev partition (1-hr jobs, 單 GPU)**:
+- Sanity check NT-Species inference — **BLOCKED**，先 `pip install transformers==4.35.2` 修
+- DNABERT-2 50M resume — 36 個 dev 接力 job + auto-resume (~3-4 天 wall clock)
+- Speed/memory unified benchmark on H200 (~30 分鐘)
+- HMP mock community real-dataset inference (~30 分鐘) — paper prep
 
-加總 45 GPU-hr，**全部 Nano4 免費 1 個月內輕鬆 cover**。
+dev partition 限制 1 hr，inference jobs 都很短不是問題，training resume 用 auto-resume 機制每 hr 接續一次也行。**這些都不需要改 code**。
 
-**紅 · Not doing**:
-- DNABERT-1 50M 繼續 (~300 GPU-hr / 13 天，CP 太低)
-- 258M 完整訓練 (~290 GPU-hr / 18 天，log-fit 預測 +4.2 pp 不影響結論)
+**金 · 需要 DDP port 才能跑（1-2 天工程）**:
+- 258M training (genus + species) — 改寫 train.py 成 DDP 分散式，然後 ~幾 hr 在 64 H200 上完成。
+- **價值評估**：log-fit 預測 +4.2 pp，**跨不過 tokenization gap (MT 13-mer 87.4%)**，不會改變 thesis 結論。
+- → Cost-benefit: 1-2 天工程換 marginal accuracy improvement，**老師決定**
+
+**紅 · 不做**:
+- DNABERT-1 50M — 5× 慢於 DNABERT-2，dev 接力要 ~10 週 wall clock，不切實際
 
 ---
 
@@ -175,18 +175,19 @@ MT 13-mer 對所有 reads 都給 prediction，所以在 low-cardinality task 反
 
 三個 decision 請老師確認：
 
-**Q1 (綠) · Migration plan: Nano4 takes over**
-確認 Nano4 (H200, 免費 1 個月) 替代 TWCC 當主要 GPU 環境。DNABERT-2 resume 在 Nano4 跑、
-TWCC 暫停、Speed benchmark 在 H200 統一做。可以嗎？
+**Q1 (綠) · 用 Nano4 dev partition 跑我們 pipeline**
+Nano4 normal 要 64 GPU 起跳（DDP-only），但我們所有 inference 任務 + DNABERT-2 resume
+都塞得進 dev (1 hr / job, 5 concurrent)。Speed benchmark、HMP、Per-genus realign 全部
+夠用。**確認走 dev partition 路線（不改 code）可以嗎？**
 
-**Q2 (紅) · DNABERT-1 50M 最終決定**
-取消。用 5M accuracy (61.78%) + 11.7 hr/epoch（vs NT-v2 2.8 hr）的訓練成本對比，
-當作 deployment limitation 證據寫進 thesis。同意嗎？
+**Q2 (橙) · 258M training — 要不要花 1-2 天工程做 DDP port？**
+重新評估：Nano4 normal 64 H200 + DDP 可以讓 258M 訓練從「18 天 wall clock」變成「1-2 天工程 + 幾小時訓練」。
+**但科學價值未變**——log-fit 預測 +4.2 pp，跨不過 MT 13-mer 87.4% 的 tokenization gap。
+這 1-2 天工程值得嗎？或是把這時間花在 paper writing / HMP validation 更好？
 
 **Q3 (金) · Per-genus 13-mer Exp F 整合**
-Taiwana-2 送來對齊版預測後，把 55.93% 加進 Table 4.30 第 4 列，作為 router-quality
-threshold 第三個 monotonic data point（87.5% router 在 per-genus pipeline 也驗證
-+2.23 pp gain）。可以嗎？
+Taiwana-2 送來對齊版預測後，把 55.93% 加進 Table 4.30，作為 router-quality threshold
+第三個 monotonic data point（87.5% router 在 per-genus pipeline 驗證 +2.23 pp gain）。同意嗎？
 
 ---
 
@@ -224,6 +225,25 @@ A: 完全一致！這就是 **router quality threshold theorem** 的證據：
 - 87.5% router (MT 13-mer) → hier 比 flat 高 (+1.12 pp read level / +2.23 pp per-genus)
 - 48.9% router (MT 6-mer) → hier 比 flat 低更多 (-2.8 pp)
 三個 router quality 完美 monotonic，theorem 成立。
+
+### Q: Nano4 normal partition 為什麼要 64 GPU 起跳？這是什麼設計？
+A: 晶創 26 (Nano4) 是 HPC scale 設計，每 node 8 H200 + 8 InfiniBand 400 Gbps。
+normal partition 設計給大規模 distributed training（LLM pre-training 等級），最小單位是
+8 個 node = 64 GPU。我們現有 single-GPU LoRA fine-tuning 不在這個 use case，要嘛
+適應 dev (1 hr 上限) 要嘛改寫成 DDP。
+
+### Q: 為什麼我們的 code 不是 DDP？
+A: NT-v2 + LoRA + 50M dataset 在單顆 H100 上 14 hr 跑完，沒必要 distributed。
+DDP overhead（NCCL init、gradient all-reduce、checkpoint coordination）對小 model 反而
+拖累。設計時的 trade-off。現在 Nano4 normal 強制 64 GPU 才暴露這個 mismatch。
+
+### Q: DDP port 真的要 1-2 天嗎？
+A: 嚴格的估算：
+- DistributedSampler、DDP wrap、torchrun init: 半天
+- per-rank logging、rank-0 only checkpointing: 半天
+- 多 node debug (NCCL config、network config): 0.5-1 天
+- Sanity check 在 8 node 確認 loss 跟單 GPU 一致: 0.5 天
+總計 1-2 天。但這個 code 改完之後可以重複用，是 reusable infrastructure investment。
 
 ---
 

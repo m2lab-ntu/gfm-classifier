@@ -217,23 +217,23 @@ def fig_decisions_matrix():
     ax.set_xlim(0, 12); ax.set_ylim(0, 7); ax.axis("off")
 
     decisions = [
-        ("Q1", "DNABERT-2 50M resubmit",
-         "Move to Nano4 H200 (free) instead of TWCC\n→ STATUS: ready once Nano4 sanity-check unblocks",
+        ("Q1", "DNABERT-2 50M resume",
+         "Nano4 dev partition: 36 jobs × 1 hr (auto-resume)\nETA ~3-4 days wall clock, no engineering needed",
          GREEN),
         ("Q2", "DNABERT-1 50M continue?",
-         "Cost: 13 days   |   Value: marginal\n→ STATUS: recommended CANCEL (5M + cost-arg suffices)",
+         "Same dev-resubmit pattern but 5× slower (~10 weeks)\n→ STATUS: still CANCEL (5M + cost-arg suffices)",
          RED),
         ("Q3", "MT 13-mer hier retrain (Taiwana-2)?",
-         "Cost: 1-2 days V100   |   Value: fill Table 4.30 row\n→ STATUS: pending advisor decision",
+         "Independent of Nano4 constraints — V100 on Taiwana-2\n→ STATUS: pending advisor decision",
          ORANGE),
         ("Q4", "Speed/memory unified benchmark",
-         "Move MT models to Nano4 → H200 unified throughput\n→ STATUS: depends on Nano4 unblock + MT migration",
+         "Inference on Nano4 dev (1 hr ≫ enough)\n→ STATUS: ready after sanity check + MT migration",
          GREEN),
-        ("Q5", "258M training?",
-         "Cost: 18 days wall clock   |   Value: +4.2 pp pred.\n→ STATUS: recommended SKIP (extrapolation in thesis)",
-         RED),
+        ("Q5", "258M training? (REVISED)",
+         "Old: 18 days. New: needs DDP port (1-2 days eng)\nthen ~3 hr on 64 H200. STILL +4.2 pp only.",
+         ORANGE),
         ("Q6", "HMP real-dataset validation",
-         "Cost: 3 hr H200 on Nano4   |   Value: must for paper\n→ STATUS: queue after sanity check passes",
+         "Inference on Nano4 dev (1 hr ≫ enough)\n→ STATUS: ready after sanity check passes",
          GREEN),
     ]
 
@@ -253,39 +253,63 @@ def fig_decisions_matrix():
 
 
 def fig_budget_status():
-    """TWCC budget out — but Nano4 H200 free 1-month unblocks everything."""
-    fig, ax = plt.subplots(figsize=(11.5, 4.2))
-    ax.set_xlim(0, 12); ax.set_ylim(0, 5); ax.axis("off")
+    """TWCC out → Nano4 H200 free 1-month, but partition constraints matter."""
+    fig, ax = plt.subplots(figsize=(12, 5.2))
+    ax.set_xlim(0, 12); ax.set_ylim(0, 6); ax.axis("off")
 
-    # Top: dual-status banner
-    ax.add_patch(FancyBboxPatch((0.3, 3.2), 5.6, 1.3, boxstyle="round,pad=0.1",
-                                 linewidth=2.5, edgecolor=RED, facecolor="#FFEBEE"))
-    ax.text(3.1, 4.15, "⚠ TWCC (Nano5) wallet: -802.5 pts",
-            ha="center", fontsize=12, fontweight="bold", color=RED)
-    ax.text(3.1, 3.65, "Cannot sbatch new jobs", ha="center", fontsize=10, color=RED)
+    # Top banner: TWCC vs Nano4
+    ax.add_patch(FancyBboxPatch((0.3, 4.4), 5.6, 1.3, boxstyle="round,pad=0.1",
+                                 linewidth=2, edgecolor=RED, facecolor="#FFEBEE"))
+    ax.text(3.1, 5.3, "⚠ TWCC (Nano5) wallet: -802.5 pts",
+            ha="center", fontsize=11.5, fontweight="bold", color=RED)
+    ax.text(3.1, 4.75, "Cannot sbatch new jobs", ha="center", fontsize=9.5, color=RED)
 
-    ax.add_patch(FancyBboxPatch((6.1, 3.2), 5.6, 1.3, boxstyle="round,pad=0.1",
-                                 linewidth=2.5, edgecolor=GREEN, facecolor="#E8F5E9"))
-    ax.text(8.9, 4.15, "✓ Nano4 H200: FREE 1 month",
-            ha="center", fontsize=12, fontweight="bold", color=GREEN)
-    ax.text(8.9, 3.65, "Repo cloned, env up, sanity check blocked on deps",
+    ax.add_patch(FancyBboxPatch((6.1, 4.4), 5.6, 1.3, boxstyle="round,pad=0.1",
+                                 linewidth=2, edgecolor=GREEN, facecolor="#E8F5E9"))
+    ax.text(8.9, 5.3, "✓ Nano4: FREE 1 month, 220 nodes × 8 H200",
+            ha="center", fontsize=11.5, fontweight="bold", color=GREEN)
+    ax.text(8.9, 4.75, "But partition rules constrain single-GPU jobs",
             ha="center", fontsize=9.5, color=GREEN)
 
-    # Three columns: done / blocked / needs unblock
-    cols = [
-        ("✓ Done (no GPU needed)", GREEN,
-         "• GitHub repo published\n• 4 envs STATUS.md filled\n• Thesis 139 pp w/ Table 4.30\n• Per-genus 13-mer (55.93%)"),
-        ("→ In progress on Nano4", TEAL,
-         "• Env setup (✓ conda, deps, data)\n• Sanity check (✗ transformers ver.)\n• Need: downgrade transformers\n• Need: sync DNABERT-2 last.pt"),
-        ("→ Once Nano4 unblocked", GOLD,
-         "• DNABERT-2 50M resume (36 hr)\n• Speed/memory benchmark (3 hr)\n• HMP real-dataset (3 hr)\n• Per-genus 13-mer realign"),
+    # Partition table
+    ax.text(6.0, 4.1, "Nano4 Slurm partitions:", ha="center",
+            fontsize=11, fontweight="bold", color=NAVY)
+
+    headers = ["partition", "max time", "min GPU", "concurrent", "fits our jobs?"]
+    rows = [
+        ["dev",    "1 hr",  "no limit (1 GPU OK)", "5 run / 5 pend",  "inference, benchmark, eval, realign ✓"],
+        ["normal", "12 hr", "min 64 GPU (8 nodes)", "5 run / 5 pend", "training jobs only if DDP-ported ⚠"],
     ]
-    for i, (title, color, body) in enumerate(cols):
-        x = 0.3 + i * 4.0
-        ax.add_patch(FancyBboxPatch((x, 0.2), 3.6, 2.6, boxstyle="round,pad=0.1",
-                                     linewidth=2, edgecolor=color, facecolor=WHITE))
-        ax.text(x + 1.8, 2.55, title, ha="center", fontsize=11, fontweight="bold", color=color)
-        ax.text(x + 0.2, 1.4, body, fontsize=9.5, color=NAVY, va="center")
+    col_x = [0.3, 1.8, 3.0, 5.4, 7.4]
+    col_w = [1.4, 1.2, 2.4, 1.9, 4.5]
+    y_h = 3.55
+    # Header row
+    for j, h in enumerate(headers):
+        ax.add_patch(Rectangle((col_x[j], y_h), col_w[j], 0.4,
+                                facecolor=NAVY, edgecolor="white"))
+        ax.text(col_x[j] + col_w[j]/2, y_h + 0.2, h,
+                ha="center", va="center", fontsize=9.5, color="white", fontweight="bold")
+    # Data rows
+    for i, row in enumerate(rows):
+        y = y_h - (i + 1) * 0.45
+        fc = "#FFF8E1" if i == 1 else "#E3F2FD"
+        for j, v in enumerate(row):
+            ax.add_patch(Rectangle((col_x[j], y), col_w[j], 0.45,
+                                    facecolor=fc, edgecolor="white"))
+            ax.text(col_x[j] + col_w[j]/2, y + 0.22, v,
+                    ha="center", va="center", fontsize=9, color=NAVY)
+
+    # Bottom: implications
+    ax.add_patch(FancyBboxPatch((0.3, 0.15), 11.4, 1.3, boxstyle="round,pad=0.1",
+                                 linewidth=2, edgecolor=GOLD, facecolor="#FFF8E1"))
+    ax.text(6.0, 1.25, "Implications for our pipeline",
+            ha="center", fontsize=11, fontweight="bold", color=GOLD)
+    ax.text(0.6, 0.85, "• Inference / eval / sample-level benchmark (NT-v2, MT, DNABERT-2 eval) — all fit `dev` 1 hr cap ✓",
+            fontsize=9.5, color=NAVY)
+    ax.text(0.6, 0.55, "• DNABERT-2 50M resume — single-GPU, can do dev resubmits (~3-4 days wall clock, auto-resume from last.pt)",
+            fontsize=9.5, color=NAVY)
+    ax.text(0.6, 0.25, "• 258M training (if pursued) — needs DDP port (1-2 days eng) → then ~3 hr on 64 H200; OR not feasible",
+            fontsize=9.5, color=NAVY)
 
     plt.savefig(TMP / "budget.png"); plt.close()
 
@@ -521,38 +545,43 @@ add_header(s, "Recommended Priorities · Next 2 Weeks",
            accent=GREEN, page=9, total=TOTAL)
 
 add_textbox(s,
-    "Immediate (CPU / no GPU needed)",
+    "Now (Taiwana-2 / CPU — no Nano4 needed)",
     Inches(0.5), Inches(1.0), Inches(12.3), Inches(0.5),
-    font_size=16, bold=True, color=GREEN)
+    font_size=15, bold=True, color=GREEN)
 add_textbox(s,
-    "• Realign Per-genus 13-mer (Exp F) on Taiwana-2 → integrate in-DB row of Table 4.30\n"
-    "• Thesis figure regeneration with new aligned MT numbers (53.7%, 94.25%)\n"
-    "• Thesis Section 4.13 proofreading + format consistency check\n"
-    "• Optional: MT 13-mer hier retraining on Taiwana-2 (Q3)",
-    Inches(0.5), Inches(1.5), Inches(12.3), Inches(1.6),
-    font_size=12, color=NAVY, align="left", bg="#E8F5E9", border=GREEN)
+    "• Realign Per-genus 13-mer (Exp F) on Taiwana-2 → integrate Table 4.30\n"
+    "• Thesis figure regeneration with aligned MT numbers (53.7%, 94.25%)\n"
+    "• Section 4.13 proofreading + format check  ·  optional MT 13-mer hier retrain (Q3)",
+    Inches(0.5), Inches(1.5), Inches(12.3), Inches(1.2),
+    font_size=11.5, color=NAVY, align="left", bg="#E8F5E9", border=GREEN)
 
 add_textbox(s,
-    "After Nano4 sanity check unblocks (~45 GPU-hr on H200, FREE)",
-    Inches(0.5), Inches(3.3), Inches(12.3), Inches(0.5),
-    font_size=16, bold=True, color=GOLD)
+    "Fits Nano4 dev partition (1-hr jobs, single-GPU)",
+    Inches(0.5), Inches(2.9), Inches(12.3), Inches(0.5),
+    font_size=15, bold=True, color=TEAL)
 add_textbox(s,
-    "• Sync DNABERT-2 50M last.pt → resume training (36 hr H200 from epoch 17)\n"
-    "• Migrate MT model checkpoints from Taiwana-2 → Nano4\n"
-    "• Run speed/memory unified benchmark on H200 (3 hr) — must-do, advisor ask\n"
-    "• HMP mock community real-dataset inference (3 hr) — paper submission prep",
-    Inches(0.5), Inches(3.8), Inches(12.3), Inches(1.6),
-    font_size=12, color=NAVY, align="left", bg="#FFF8E1", border=GOLD)
+    "• Sanity check NT-Species inference (BLOCKED — fix transformers==4.35.2 first)\n"
+    "• DNABERT-2 50M resume — 36 dev resubmits w/ auto-resume from last.pt (~3-4 days)\n"
+    "• Speed/memory unified benchmark on H200 (~30 min wall clock)\n"
+    "• HMP mock community real-dataset inference (~30 min) — paper prep",
+    Inches(0.5), Inches(3.4), Inches(12.3), Inches(1.6),
+    font_size=11.5, color=NAVY, align="left", bg="#E3F2FD", border=TEAL)
 
 add_textbox(s,
-    "Recommended NOT to do (advisor confirm if disagree)",
-    Inches(0.5), Inches(5.6), Inches(12.3), Inches(0.5),
-    font_size=16, bold=True, color=RED)
+    "Requires DDP port (1-2 days eng) for Nano4 normal partition",
+    Inches(0.5), Inches(5.2), Inches(12.3), Inches(0.5),
+    font_size=15, bold=True, color=GOLD)
 add_textbox(s,
-    "• DNABERT-1 50M continue: ~300 GPU-hr / 13 days — 5M evidence + 11.7 hr/epoch cost argument suffices\n"
-    "• 258M training: ~290 GPU-hr / 18 days — log-fit predicts +4.2 pp, does not cross tokenisation gap",
-    Inches(0.5), Inches(6.1), Inches(12.3), Inches(1.1),
-    font_size=12, color=NAVY, align="left", bg="#FFEBEE", border=RED)
+    "• 258M training (genus +species) — DDP code rewrite, then ~few hr on 64 H200.\n"
+    "  Value: log-fit predicts +4.2 pp, does NOT cross tokenisation gap (MT 13-mer 87.4%)\n"
+    "  → Cost-benefit: 1-2 days engineering for marginal acc improvement",
+    Inches(0.5), Inches(5.7), Inches(12.3), Inches(1.0),
+    font_size=11.5, color=NAVY, align="left", bg="#FFF8E1", border=GOLD)
+
+add_textbox(s,
+    "Not doing — DNABERT-1 50M (300 GPU-hr / 5× slower than DNABERT-2 — single dev partition impractical, ~10 weeks)",
+    Inches(0.5), Inches(6.85), Inches(12.3), Inches(0.4),
+    font_size=10.5, color=RED, align="left", bg="#FFEBEE", border=RED)
 
 
 # ─── SLIDE 10: Ask + Questions ────────────────────────────────────────────
@@ -565,14 +594,15 @@ add_textbox(s,
     font_size=18, bold=True, color=NAVY)
 
 qs = [
-    ("1", "Migration plan: Nano4 takes over",
-     "Confirm Nano4 (H200, free 1-month) replaces TWCC as primary GPU. "
-     "DNABERT-2 resumes on Nano4. TWCC dormant. Speed benchmark on H200. OK?",
+    ("1", "Use Nano4 dev partition for our pipeline",
+     "Nano4 normal needs 64 GPU min (DDP-only). Plan: all our inference + DNABERT-2 "
+     "resume go on dev (1-hr jobs, auto-resume). Speed benchmark / HMP / Per-genus realign "
+     "all fit. OK?",
      GREEN),
-    ("2", "DNABERT-1 50M — final call",
-     "Cancel. Use 5M acc (61.78%) + 11.7 hr/epoch cost vs NT-v2's 2.8 hr "
-     "as deployment-limitation evidence in thesis. Agreed?",
-     RED),
+    ("2", "258M training — DDP port worth it?",
+     "Nano4 normal makes 258M technically viable: 1-2 days DDP port + few hours on 64 H200. "
+     "Predicted gain: +4.2 pp (log-fit), does NOT cross tokenisation gap. Pursue or skip?",
+     ORANGE),
     ("3", "Per-genus 13-mer Exp F integration",
      "Once Taiwana-2 sends realigned predictions, add 4th row to Table 4.30 "
      "showing 55.93% (3rd router-quality data point validating monotonic theorem). OK?",
