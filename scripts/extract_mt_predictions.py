@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# Deprioritize this script's own directory so MetaTransformer's `utils` package
+# (utils/utils.py) takes precedence over scripts/utils.py in sys.path.
+import sys as _sys, os as _os
+_script_dir = _os.path.dirname(_os.path.abspath(__file__))
+if _script_dir in _sys.path:
+    _sys.path.remove(_script_dir)
+    _sys.path.append(_script_dir)
+del _sys, _os
+
 """
 Extract MT model predictions on a FASTA directory, save preds+probs+labels as npz.
 
