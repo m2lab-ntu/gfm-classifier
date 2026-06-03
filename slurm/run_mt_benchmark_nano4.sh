@@ -16,7 +16,7 @@
 # Reports: throughput (reads/sec), latency (ms/read), peak GPU (MiB)
 # ============================================================
 
-set -euo pipefail
+set -uo pipefail
 
 REPO=/work/ymj1123ntu/gfm-classifier
 SCRIPTS=${REPO}/scripts
@@ -62,8 +62,8 @@ run_benchmark() {
     echo "CMD:   ${CMD}"
     echo "──────────────────────────────────────────"
 
-    # Reset GPU memory stats
-    nvidia-smi --gpu-reset-stats 2>/dev/null || true
+    # Export PYTHONPATH for MetaTransformer (must be set before eval, not inline)
+    export PYTHONPATH="${MT_SRC}"
 
     # Start background GPU monitor (sample every 2s)
     GPU_LOG=/tmp/gpu_monitor_$$.log
@@ -112,7 +112,7 @@ run_benchmark "NT-v2_sp_v4_species" \
 
 # ── 2. MT 13mer stride1 species ──────────────────────────────────────────────
 run_benchmark "MT_13mer_stride1_species" \
-    "PYTHONPATH=${MT_SRC} python ${SCRIPTS}/extract_mt_predictions.py \
+    "python ${SCRIPTS}/extract_mt_predictions.py \
         --exp_dir       ${MT_ROOT}/mt_13mer_stride1_species_895688 \
         --val_dir       ${VAL_DIR} \
         --vocab         ${VOCAB_13} \
@@ -122,7 +122,7 @@ run_benchmark "MT_13mer_stride1_species" \
 
 # ── 3. MT 13mer stride1 genus ─────────────────────────────────────────────────
 run_benchmark "MT_13mer_stride1_genus" \
-    "PYTHONPATH=${MT_SRC} python ${SCRIPTS}/extract_mt_predictions.py \
+    "python ${SCRIPTS}/extract_mt_predictions.py \
         --exp_dir       ${MT_ROOT}/mt_13mer_stride1_genus_895686 \
         --val_dir       ${VAL_DIR} \
         --vocab         ${VOCAB_13} \
@@ -132,7 +132,7 @@ run_benchmark "MT_13mer_stride1_genus" \
 
 # ── 4. MT 6mer stride1 species ───────────────────────────────────────────────
 run_benchmark "MT_6mer_stride1_species" \
-    "PYTHONPATH=${MT_SRC} python ${SCRIPTS}/extract_mt_predictions.py \
+    "python ${SCRIPTS}/extract_mt_predictions.py \
         --exp_dir       ${MT_ROOT}/mt_6mer_stride1_species_894641 \
         --val_dir       ${VAL_DIR} \
         --vocab         ${VOCAB_6} \
@@ -142,7 +142,7 @@ run_benchmark "MT_6mer_stride1_species" \
 
 # ── 5. MT 6mer stride6 species ───────────────────────────────────────────────
 run_benchmark "MT_6mer_stride6_species" \
-    "PYTHONPATH=${MT_SRC} python ${SCRIPTS}/extract_mt_predictions.py \
+    "python ${SCRIPTS}/extract_mt_predictions.py \
         --exp_dir       ${MT_ROOT}/mt_6mer_stride6_species_894640 \
         --val_dir       ${VAL_DIR} \
         --vocab         ${VOCAB_6} \
