@@ -347,7 +347,20 @@ def main():
     if args.resume:
         print(f"\n--- Resuming from checkpoint: {args.resume} ---")
         resume_ckpt = torch.load(args.resume, map_location=device, weights_only=False)
-        model.load_state_dict(resume_ckpt["model_state_dict"])
+        # Remap old peft (<0.6) key format: query.weight → query.base_layer.weight
+        _sd = resume_ckpt["model_state_dict"]
+        _remapped = {}
+        for _k, _v in _sd.items():
+            _parts = _k.split(".")
+            if len(_parts) >= 2 and _parts[-1] in ("weight", "bias") and _parts[-2] in ("query", "key", "value"):
+                _remapped[".".join(_parts[:-1]) + ".base_layer." + _parts[-1]] = _v
+            else:
+                _remapped[_k] = _v
+        _missing, _unexpected = model.load_state_dict(_remapped, strict=False)
+        if _missing:
+            print(f"  [warn] Missing keys after remap: {_missing[:3]}...")
+        if _unexpected:
+            print(f"  [warn] Unexpected keys after remap: {_unexpected[:3]}...")
         resume_epoch = resume_ckpt.get("epoch", 0)
         has_optim = "optimizer_state_dict" in resume_ckpt
         print(f"  Loaded model weights from epoch {resume_epoch}")

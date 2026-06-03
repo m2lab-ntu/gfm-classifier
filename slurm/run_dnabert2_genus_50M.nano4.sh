@@ -40,7 +40,8 @@ echo "========================================"
 nvidia-smi || true
 echo ""
 
-source ~/miniconda/etc/profile.d/conda.sh
+module load miniconda3/26.1.1
+source $(conda info --base)/etc/profile.d/conda.sh
 conda activate gfm
 
 export HF_HOME=/work/ymj1123ntu/.cache/huggingface
