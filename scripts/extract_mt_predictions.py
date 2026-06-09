@@ -92,7 +92,20 @@ def load_mt_model(exp_dir, vocab, device):
     net = instantiate_model_by_str_name(cfg.model.name, cfg, vocab_size)
     ckpt_path = exp_dir / "checkpoints" / "classification_transformer_ckpt_best.pt"
     state = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-    net.load_state_dict(state["model_state_dict"], strict=False)
+    # Reconcile vocab-size mismatches (off-by-one between training vocab and
+    # current vocab file): truncate or zero-pad the checkpoint embedding row.
+    ckpt_sd = state["model_state_dict"]
+    curr_sd = net.state_dict()
+    for key in list(ckpt_sd.keys()):
+        if key in curr_sd and ckpt_sd[key].shape != curr_sd[key].shape:
+            c_shape, k_shape = curr_sd[key].shape, ckpt_sd[key].shape
+            if c_shape[0] != k_shape[0]:
+                if k_shape[0] > c_shape[0]:
+                    ckpt_sd[key] = ckpt_sd[key][:c_shape[0]]
+                else:
+                    pad = torch.zeros(c_shape[0] - k_shape[0], *k_shape[1:])
+                    ckpt_sd[key] = torch.cat([ckpt_sd[key], pad], dim=0)
+    net.load_state_dict(ckpt_sd, strict=False)
     net.eval().to(device)
     transforms = read_transforms_for_input_layer(
         cfg.mdl_common.input_module, cfg, vocab, train=False
