@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -A MST114550
 #SBATCH -J nt_genus_258M
-#SBATCH -p normal
+#SBATCH -p 64gpus
 #SBATCH --nodes=8
 #SBATCH --ntasks-per-node=8
 #SBATCH --gres=gpu:8
