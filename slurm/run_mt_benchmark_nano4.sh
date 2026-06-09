@@ -175,7 +175,7 @@ if [ -f "${NT_GENUS_CKPT}" ]; then
 else
     echo ""
     echo "⚠ Skipping NT-v2 genus: ${NT_GENUS_CKPT} not found"
-    echo "  Run: rsync nano5:/work/ymj1123ntu/token_level_gfm_classifier/results/nt_token_genus_v9_50M/best.pt ${NT_GENUS_CKPT}"
+    echo "  Run: rsync nano5:/work/ymj1123ntu/token_level_gfm_classifier/results/nt_token_genus_lora_v9_50M/best.pt ${NT_GENUS_CKPT}"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────
