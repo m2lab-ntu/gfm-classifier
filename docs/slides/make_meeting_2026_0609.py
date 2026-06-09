@@ -48,29 +48,36 @@ plt.rcParams.update({"font.family":"DejaVu Sans","font.size":11,
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def fig_timeline():
-    fig, ax = plt.subplots(figsize=(13, 3.8))
-    ax.set_xlim(0, 13); ax.set_ylim(0, 4.2); ax.axis("off")
-    ax.add_patch(Rectangle((0.4, 1.9), 12.2, 0.12, facecolor=NAVY))
+    # Alternating up/down labels to prevent horizontal crowding
+    fig, ax = plt.subplots(figsize=(13, 5.0))
+    ax.set_xlim(0, 13); ax.set_ylim(0, 5.5); ax.axis("off")
+    ax.add_patch(Rectangle((0.3, 2.5), 12.4, 0.13, facecolor=NAVY))
 
+    # (x, date, label, color, up=True means label above the line)
     events = [
-        (0.7,  "6/2",  "Advisor\nmeeting\n(deck 0602)", TEAL),
-        (2.2,  "6/2",  "Nano4 env\nsetup started", TEAL),
-        (3.5,  "6/3",  "Sanity check\nPASSED ✓\n(Job 71907)", GREEN),
-        (5.0,  "6/3",  "peft compat\nfix applied", ORANGE),
-        (6.3,  "6/5",  "DNABERT-2\nNano4 script\nready", GREEN),
-        (7.7,  "6/6",  "MT benchmark\nscript ready\n(6 models)", GREEN),
-        (9.0,  "6/6",  "vocab / device\nbug fixes", ORANGE),
-        (10.5, "6/7",  "data_loader +\nresource_monitor\nadded", GREEN),
-        (12.0, "6/9",  "TODAY\nFire P0\njobs", GOLD),
+        (0.8,  "6/2",  "Advisor meeting\n(deck 0602)", TEAL,   True),
+        (2.4,  "6/2",  "Nano4 env\nsetup started",     TEAL,   False),
+        (4.0,  "6/3",  "Sanity check\nPASSED ✓",       GREEN,  True),
+        (5.6,  "6/3-5","peft / vocab /\ndevice fixes",  ORANGE, False),
+        (7.2,  "6/5",  "DNABERT-2\nscript ready",      GREEN,  True),
+        (8.8,  "6/6",  "MT benchmark\nscript ready",   GREEN,  False),
+        (10.4, "6/7",  "data_loader +\nresource_monitor", TEAL, True),
+        (12.0, "6/9",  "TODAY\nFire P0", GOLD, False),
     ]
-    for x, date, label, color in events:
-        ax.scatter(x, 1.96, s=180, color=color, zorder=4, edgecolor="white", linewidth=2)
-        ax.text(x, 2.65, date, ha="center", fontsize=10, fontweight="bold", color=color)
-        ax.text(x, 1.35, label, ha="center", fontsize=8, color=NAVY, va="top")
+    for x, date, label, color, up in events:
+        ax.scatter(x, 2.565, s=200, color=color, zorder=4, edgecolor="white", linewidth=2)
+        if up:
+            ax.text(x, 3.05, date,  ha="center", fontsize=10, fontweight="bold", color=color)
+            ax.text(x, 3.45, label, ha="center", fontsize=9,  color=NAVY, va="bottom")
+            ax.plot([x, x], [2.62, 3.0], color=color, lw=1, alpha=0.5)
+        else:
+            ax.text(x, 2.10, date,  ha="center", fontsize=10, fontweight="bold", color=color)
+            ax.text(x, 1.95, label, ha="center", fontsize=9,  color=NAVY, va="top")
+            ax.plot([x, x], [2.50, 2.15], color=color, lw=1, alpha=0.5)
 
-    ax.text(6.5, 3.9, "Progress Timeline · 6/2 advisor meeting → 6/9 (today)",
+    ax.text(6.5, 5.2, "Progress Timeline · 6/2 advisor meeting → 6/9 (today)",
             ha="center", fontsize=13, fontweight="bold", color=NAVY)
-    plt.savefig(TMP/"timeline.png"); plt.close()
+    plt.savefig(TMP/"timeline.png", bbox_inches="tight"); plt.close()
 
 
 def fig_nano4_status():
@@ -194,8 +201,7 @@ def fig_dnabert2_plan():
     ax2.text(64.45+0.3, -0.7, "NT-v2\nbaseline", fontsize=8, color=TEAL, alpha=0.7)
     ax2.text(99, 3.1, "* estimate", fontsize=8, color=ORANGE)
 
-    plt.tight_layout()
-    plt.savefig(TMP/"dnabert2_plan.png"); plt.close()
+    plt.savefig(TMP/"dnabert2_plan.png", bbox_inches="tight"); plt.close()
 
 
 def fig_mt_benchmark():
@@ -267,102 +273,113 @@ def fig_mt_benchmark():
 
 
 def fig_engineering():
-    fig, ax = plt.subplots(figsize=(13, 5))
+    fig, ax = plt.subplots(figsize=(13, 6.5))
     ax.axis("off"); ax.set_xlim(0,1); ax.set_ylim(0,1)
-    ax.text(0.5, 0.97, "Engineering Fixes This Week (6 commits)", ha="center",
+    ax.text(0.5, 0.975, "Engineering Fixes This Week (6 commits)", ha="center",
             fontsize=14, fontweight="bold", color=NAVY, va="top")
 
     fixes = [
-        (GREEN,  "peft key remap",
-                 "480b7dc",
-                 "peft ≥0.6 renamed query.weight → query.base_layer.weight.\n"
+        (GREEN,  "peft key remap",        "480b7dc",
+                 "peft ≥0.6 renamed query.weight → query.base_layer.weight. "
                  "Auto-remapped in train.py resume so old TWCC checkpoints load on Nano4."),
-        (GREEN,  "Vocab size mismatch",
-                 "5087e3f",
-                 "MT 13-mer genus checkpoint had embedding dim 4097 vs expected 4096.\n"
+        (GREEN,  "Vocab size mismatch",   "5087e3f",
+                 "MT 13-mer genus checkpoint had embedding dim 4097 vs expected 4096. "
                  "extract_mt_predictions now truncates/pads embedding row to match."),
-        (TEAL,   "data_loader.py added",
-                 "d6fd99b",
-                 "data_loader.py was missing from repo (only on TWCC local).\n"
+        (TEAL,   "data_loader.py added",  "d6fd99b",
+                 "data_loader.py was missing from repo (only on TWCC local). "
                  "Added to scripts/ so all envs can use the unified FASTA loader."),
-        (TEAL,   "PYTHONPATH / sys.path fix",
-                 "39f9291",
-                 "extract_mt_predictions was shadowing MT's own utils package via sys.path.\n"
+        (TEAL,   "PYTHONPATH / sys.path", "39f9291",
+                 "extract_mt_predictions was shadowing MT's own utils package via sys.path. "
                  "Fixed import order; MetaTransformer src now loads correctly."),
-        (ORANGE, "Device handler init",
-                 "61239b6",
-                 "MT device_handler required explicit cuda init before model.to(device).\n"
-                 "Added init call in benchmark loop; also added mid-epoch time_limit_sec save."),
-        (PURPLE, "resource_monitor.py",
-                 "39f9291",
-                 "New script: logs GPU memory + CPU usage every N seconds during inference.\n"
-                 "Used by benchmark script for peak GPU MiB measurement."),
+        (ORANGE, "Device handler init",   "61239b6",
+                 "MT device_handler required explicit cuda init before model.to(device). "
+                 "Added init call; also added mid-epoch time_limit_sec checkpoint save."),
+        (PURPLE, "resource_monitor.py",   "39f9291",
+                 "New script: logs GPU memory + CPU usage every N sec during inference. "
+                 "Used by benchmark for peak GPU MiB measurement."),
     ]
 
-    cols = [(0.01, 0.5), (0.51, 1.00)]
+    # 2-column layout with generous spacing
+    ITEM_H   = 0.125   # normalized height per item box
+    ROW_GAP  = 0.025   # gap between rows
+    ROW_STEP = ITEM_H + ROW_GAP
+    TOP_Y    = 0.905   # y of first row top
+
+    cols = [(0.01, 0.49), (0.51, 0.99)]
     for i, (color, title, commit, body) in enumerate(fixes):
         col_x, col_end = cols[i % 2]
         row = i // 2
-        y_top = 0.83 - row * 0.295
-        w = col_end - col_x - 0.02
-        ax.add_patch(FancyBboxPatch((col_x, y_top-0.22), w, 0.24,
-                                     boxstyle="round,pad=0.01",
-                                     facecolor=color+"18", edgecolor=color, linewidth=1.5))
-        ax.text(col_x+0.02, y_top+0.01, title, fontsize=11, color=color,
-                fontweight="bold", va="top")
-        ax.text(col_end-0.02, y_top+0.01, commit, fontsize=8.5, color=GRAY,
-                fontweight="normal", va="top", ha="right", family="monospace")
-        ax.text(col_x+0.02, y_top-0.045, body, fontsize=9, color=NAVY, va="top")
+        y_top = TOP_Y - row * ROW_STEP
+        w = col_end - col_x
 
-    plt.tight_layout()
-    plt.savefig(TMP/"engineering.png"); plt.close()
+        ax.add_patch(FancyBboxPatch((col_x, y_top - ITEM_H), w, ITEM_H,
+                                     boxstyle="round,pad=0.008",
+                                     facecolor=color+"18", edgecolor=color, linewidth=1.5))
+        # Title + commit hash on same line
+        ax.text(col_x+0.015, y_top - 0.015, title, fontsize=10.5, color=color,
+                fontweight="bold", va="top")
+        ax.text(col_end - 0.01, y_top - 0.015, commit, fontsize=8, color=GRAY,
+                fontweight="normal", va="top", ha="right", family="monospace")
+        # Body (single line, no \n)
+        ax.text(col_x+0.015, y_top - 0.055, body, fontsize=8.8, color=NAVY,
+                va="top", wrap=True)
+
+    plt.savefig(TMP/"engineering.png", bbox_inches="tight"); plt.close()
 
 
 def fig_decisions():
-    fig, ax = plt.subplots(figsize=(13, 5.5))
+    fig, ax = plt.subplots(figsize=(13, 6.5))
     ax.axis("off"); ax.set_xlim(0,1); ax.set_ylim(0,1)
-    ax.text(0.5, 0.97, "Decision Board · 6/9", ha="center",
+    ax.text(0.5, 0.975, "Decision Board · 6/9", ha="center",
             fontsize=14, fontweight="bold", color=NAVY, va="top")
 
-    sections = [
-        ("RESOLVED", GREEN, [
-            ("TWCC budget crisis",
-             "Nano4 H200 free trial covers all pending compute.\n"
-             "TWCC top-up NOT needed for thesis experiments."),
-            ("Nano4 onboarding",
-             "Sanity check passed (Job 71907). Pipeline identical to TWCC.\n"
-             "All DNABERT-2 + MT benchmark jobs can run here."),
-        ]),
-        ("PENDING — need advisor input", ORANGE, [
-            ("Q1: DNABERT-1 50M",
-             "Extremely slow: 11.7 hr/epoch → ~350 dev jobs for 30 epochs.\n"
-             "Recommendation: cancel. 5M checkpoint (61.78% RC TTA) sufficient for thesis."),
-            ("Q2: MT 13-mer hier retraining",
-             "Taiwana-2 checkpoint corrupted. ~1-2 days on V100 to retrain.\n"
-             "Adds +2-3 pp row to Table 4.29. Decision before 6/15 defense."),
-            ("Q3: HMP real-dataset inference",
-             "Download SRR072232 mock community (~1-2 GB), run NT-v2 sp_v4.\n"
-             "Adds real-world validation section. Journal paper priority?"),
-        ]),
+    # Each item: (title, body_line1, body_line2_or_None, color)
+    resolved = [
+        ("✓  TWCC budget crisis",
+         "Nano4 H200 free trial covers all pending compute — TWCC top-up NOT needed.",
+         None, GREEN),
+        ("✓  Nano4 onboarding",
+         "Sanity check PASSED (Job 71907). Pipeline identical to TWCC baseline (17.83%).",
+         None, GREEN),
+    ]
+    pending = [
+        ("Q1  DNABERT-1 50M",
+         "11.7 hr/epoch → ~350 dev jobs. Recommend: cancel.",
+         "5M checkpoint (61.78% RC TTA) is sufficient for thesis comparison.", ORANGE),
+        ("Q2  MT 13-mer hier retraining",
+         "Checkpoint corrupted on Taiwana-2. ~1-2 days V100 to retrain.",
+         "Adds +2-3 pp to Table 4.29. Decide before 6/15 defense.", ORANGE),
+        ("Q3  HMP real-dataset inference",
+         "Download SRR072232 mock community (~1-2 GB), run NT-v2 sp_v4.",
+         "Pearson r vs known abundance → real-world validation for journal.", ORANGE),
     ]
 
-    y = 0.87
-    for section_title, color, items in sections:
-        ax.add_patch(Rectangle((0, y-0.02), 1, 0.03, facecolor=color+"33", edgecolor="none"))
-        ax.text(0.02, y-0.005, section_title, fontsize=11, color=color,
-                fontweight="bold", va="center")
-        y -= 0.05
-        for title, body in items:
-            ax.add_patch(FancyBboxPatch((0.02, y-0.095), 0.96, 0.1,
-                                         boxstyle="round,pad=0.01",
-                                         facecolor=color+"12", edgecolor=color+"66", linewidth=1))
-            ax.text(0.05, y-0.015, title, fontsize=10.5, color=NAVY, fontweight="bold")
-            ax.text(0.05, y-0.048, body, fontsize=9.5, color=GRAY)
-            y -= 0.115
-        y -= 0.02
+    ITEM_H  = 0.115
+    ITEM_GAP = 0.015
+    STEP    = ITEM_H + ITEM_GAP
+    HDR_H   = 0.045
 
-    plt.tight_layout()
-    plt.savefig(TMP/"decisions.png"); plt.close()
+    def draw_section(title, color, items, y_start):
+        ax.add_patch(Rectangle((0, y_start - HDR_H), 1, HDR_H,
+                                facecolor=color+"33", edgecolor="none"))
+        ax.text(0.02, y_start - HDR_H/2, title, fontsize=11, color=color,
+                fontweight="bold", va="center")
+        y = y_start - HDR_H - ITEM_GAP
+        for t, b1, b2, c in items:
+            ax.add_patch(FancyBboxPatch((0.01, y - ITEM_H), 0.98, ITEM_H,
+                                         boxstyle="round,pad=0.008",
+                                         facecolor=c+"12", edgecolor=c+"88", linewidth=1.2))
+            ax.text(0.03, y - 0.018, t,  fontsize=10.5, color=NAVY, fontweight="bold", va="top")
+            ax.text(0.03, y - 0.052, b1, fontsize=9.5,  color=GRAY, va="top")
+            if b2:
+                ax.text(0.03, y - 0.081, b2, fontsize=9.5, color=GRAY, va="top")
+            y -= STEP
+        return y - ITEM_GAP
+
+    y = draw_section("RESOLVED ✓", GREEN, resolved, 0.935)
+    draw_section("PENDING — need advisor input today", ORANGE, pending, y)
+
+    plt.savefig(TMP/"decisions.png", bbox_inches="tight"); plt.close()
 
 
 def fig_next_steps():
