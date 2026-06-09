@@ -150,6 +150,34 @@ run_benchmark "MT_6mer_stride6_species" \
         --class_indices 1 \
         --batch_size    ${BATCH}"
 
+# ── 6. MT 13mer stride13 genus ───────────────────────────────────────────────
+run_benchmark "MT_13mer_stride13_genus" \
+    "python ${SCRIPTS}/extract_mt_predictions.py \
+        --exp_dir       ${MT_ROOT}/mt_13mer_stride13_genus_895685 \
+        --val_dir       ${VAL_DIR} \
+        --vocab         ${VOCAB_13} \
+        --out           ${OUT_ROOT}/mt_13mer_stride13_genus.npz \
+        --class_indices 3 \
+        --batch_size    ${BATCH}"
+
+# ── 7. NT-v2 genus v9 (if checkpoint present) ─────────────────────────────────
+NT_GENUS_CKPT=/work/ymj1123ntu/checkpoints/nt_token_genus_v9_50M_best.pt
+if [ -f "${NT_GENUS_CKPT}" ]; then
+    run_benchmark "NT-v2_v9_genus" \
+        "python ${SCRIPTS}/run_nt_genus_test100k.py \
+            --config        ${REPO}/configs/nt_token_genus_v9_50M.yaml \
+            --checkpoint    ${NT_GENUS_CKPT} \
+            --test_fasta    ${DATA}/reads_100K.fa \
+            --test_labels   ${DATA}/labels_100K.tsv \
+            --train_labels  ${DATA}/labels_50M.tsv \
+            --out_dir       ${OUT_ROOT}/nt_genus_v9 \
+            --batch_size    ${BATCH}"
+else
+    echo ""
+    echo "⚠ Skipping NT-v2 genus: ${NT_GENUS_CKPT} not found"
+    echo "  Run: rsync nano5:/work/ymj1123ntu/token_level_gfm_classifier/results/nt_token_genus_v9_50M/best.pt ${NT_GENUS_CKPT}"
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
 echo "========================================================"
