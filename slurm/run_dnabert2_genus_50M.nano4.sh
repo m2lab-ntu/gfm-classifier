@@ -89,10 +89,14 @@ if [ -f "${CKPT_DIR}/last.pt" ]; then
     python -u train.py \
         --config /tmp/dnabert2_nano4.yaml \
         --resume "${CKPT_DIR}/last.pt" \
+        --time_limit_sec 3300 \
         2>&1
 else
     echo "=== Starting training from scratch ==="
-    python -u train.py --config /tmp/dnabert2_nano4.yaml 2>&1
+    python -u train.py \
+        --config /tmp/dnabert2_nano4.yaml \
+        --time_limit_sec 3300 \
+        2>&1
 fi
 
 echo ""

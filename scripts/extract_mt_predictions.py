@@ -76,6 +76,18 @@ def parse_fasta_dir(val_dir, class_index):
 def load_mt_model(exp_dir, vocab, device):
     exp_dir = Path(exp_dir)
     cfg = OmegaConf.load(exp_dir / "config.yaml")
+
+    # init_device_handler must be called before ClassificationTransformer.__init__
+    # which calls DeviceHandler.get_device() internally.
+    from utils.device_handler import init_device_handler
+    dev = cfg.get("device_settings", {})
+    init_device_handler(
+        use_cpu=dev.get("use_cpu", False),
+        gpu_count=dev.get("gpu_count", 1),
+        gpu_ids=dev.get("gpu_ids", None),
+        split_gpus=dev.get("split_gpus", False),
+    )
+
     vocab_size = len(vocab)
     net = instantiate_model_by_str_name(cfg.model.name, cfg, vocab_size)
     ckpt_path = exp_dir / "checkpoints" / "classification_transformer_ckpt_best.pt"
