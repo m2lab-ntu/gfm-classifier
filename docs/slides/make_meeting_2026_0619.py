@@ -24,7 +24,7 @@ from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 
-DOCS = Path("/work/ymj1123ntu/gfm-classifier/docs/slides")
+DOCS = Path(__file__).parent
 TMP  = DOCS / "meeting_0619_figs"
 TMP.mkdir(exist_ok=True)
 OUT  = DOCS / "meeting_2026_0619.pptx"
@@ -115,9 +115,9 @@ def fig_paradox():
     ax2.plot([258], [40.1], "v", color=RED, ms=13)
     ax2.text(258, 37.0, "v10 (weights=T)\n40.1% test", ha="center", fontsize=9, color=RED, fontweight="bold")
     ax2.plot([258], [45.4], "s", color=ORANGE, ms=11)
-    ax2.text(258, 47.5, "v12 warm 45.4%", ha="center", fontsize=8.5, color=ORANGE)
+    ax2.text(268, 47.0, "v12 warm\n45.4%", ha="left", fontsize=8.5, color=ORANGE)
     ax2.plot([258], [44.5], "D", color=TEAL, ms=10)
-    ax2.text(213, 44.0, "v13 scratch 44.5%", ha="right", fontsize=8.5, color=TEAL)
+    ax2.text(200, 42.0, "v13 scratch\n44.5%", ha="right", fontsize=8.5, color=TEAL)
     ax2.annotate("", xy=(258, 44.5), xytext=(50, 66.6),
                  arrowprops=dict(arrowstyle="->", color=RED, lw=2, alpha=0.45, linestyle="--"))
     ax2.set_xlim(0, 300); ax2.set_ylim(35, 75)
@@ -285,7 +285,7 @@ def fig_infra():
                 fontsize=11, fontweight="bold", color=colors[0] if v>100 else GREEN)
     ax.set_ylim(0, 540); ax.set_ylabel("Minutes per epoch")
     ax.set_title("NFS cache → 11× epoch-time swing", fontsize=12, fontweight="bold", color=NAVY)
-    ax.annotate("11×", xy=(0.5, 260), fontsize=20, color=GRAY, ha="center", fontweight="bold")
+    ax.text(0.5, 260, "11×  faster", ha="center", fontsize=18, color=GRAY, fontweight="bold")
 
     # Right: infra facts
     ax2 = axes[1]; ax2.axis("off"); ax2.set_xlim(0,1); ax2.set_ylim(0,1)
