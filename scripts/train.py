@@ -51,7 +51,8 @@ def _get_amp_dtype(use_amp):
 
 def train_epoch(model, loader, criterion, optimizer, scheduler, scaler,
                 device, grad_accum, max_grad_norm, use_amp, amp_dtype=None,
-                log_prior=None, rc_consistency=False, lambda_kl=0.1):
+                log_prior=None, rc_consistency=False, lambda_kl=0.1,
+                periodic_save_fn=None, periodic_save_interval=5000):
     """Train for one epoch with NaN detection, logit adjustment, and RC consistency.
 
     Args:
@@ -151,6 +152,9 @@ def train_epoch(model, loader, criterion, optimizer, scheduler, scaler,
             postfix["kl"] = f"{kl_meter.avg:.4f}"
         pbar.set_postfix(postfix)
 
+        if periodic_save_fn and step > 0 and step % periodic_save_interval == 0:
+            periodic_save_fn(step)
+
     if nan_count > 0:
         print(f"\n  ⚠️  Total NaN/Inf events this epoch: {nan_count}")
 
@@ -193,6 +197,8 @@ def main():
                         help="Path to checkpoint (last.pt) to resume SAME experiment")
     parser.add_argument("--init_from", type=str, default=None,
                         help="Path to checkpoint to initialize weights from (transfer learning, epoch resets to 0)")
+    parser.add_argument("--time_limit_sec", type=int, default=None,
+                        help="Save last.pt and exit gracefully after this many seconds (for dev partition jobs)")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -347,7 +353,20 @@ def main():
     if args.resume:
         print(f"\n--- Resuming from checkpoint: {args.resume} ---")
         resume_ckpt = torch.load(args.resume, map_location=device, weights_only=False)
-        model.load_state_dict(resume_ckpt["model_state_dict"])
+        # Remap old peft (<0.6) key format: query.weight → query.base_layer.weight
+        _sd = resume_ckpt["model_state_dict"]
+        _remapped = {}
+        for _k, _v in _sd.items():
+            _parts = _k.split(".")
+            if len(_parts) >= 2 and _parts[-1] in ("weight", "bias") and _parts[-2] in ("query", "key", "value"):
+                _remapped[".".join(_parts[:-1]) + ".base_layer." + _parts[-1]] = _v
+            else:
+                _remapped[_k] = _v
+        _missing, _unexpected = model.load_state_dict(_remapped, strict=False)
+        if _missing:
+            print(f"  [warn] Missing keys after remap: {_missing[:3]}...")
+        if _unexpected:
+            print(f"  [warn] Unexpected keys after remap: {_unexpected[:3]}...")
         resume_epoch = resume_ckpt.get("epoch", 0)
         has_optim = "optimizer_state_dict" in resume_ckpt
         print(f"  Loaded model weights from epoch {resume_epoch}")
@@ -597,10 +616,36 @@ def main():
             print(f"  Loaded {len(history)} rows from existing training_history.csv")
 
     start_time = time.time()
+    job_start_time = start_time
 
     for epoch in range(resume_epoch, num_epochs):
         print(f"Epoch {epoch + 1}/{num_epochs}")
         monitor.epoch_start(epoch + 1)
+
+        # Mid-epoch time-limit check: if running close to wall-clock limit,
+        # save last.pt and exit before Slurm kills us.
+        if args.time_limit_sec is not None:
+            def _mid_epoch_save_and_exit(batch_idx):
+                elapsed_job = time.time() - job_start_time
+                if elapsed_job >= args.time_limit_sec:
+                    print(f"\n⏰ Time limit ({args.time_limit_sec}s) reached at batch {batch_idx}."
+                          f" Saving last.pt and exiting.")
+                    sys.stdout.flush()
+                    torch.save(dict(
+                        model_state_dict=model.state_dict(),
+                        optimizer_state_dict=optimizer.state_dict(),
+                        scheduler_state_dict=scheduler.state_dict(),
+                        epoch=epoch,         # NOT epoch+1: this epoch is incomplete
+                        val_acc=history[-1]["val_acc"] if history else 0.0,
+                        best_val_acc=early_stop.best,
+                        patience_counter=early_stop.counter,
+                        config=cfg,
+                    ), output_dir / "last.pt")
+                    print(f"  Saved. Resume with: --resume {output_dir}/last.pt")
+                    sys.exit(0)
+            periodic_save_fn = _mid_epoch_save_and_exit
+        else:
+            periodic_save_fn = None
 
         tr_loss, tr_acc, tr_f1 = train_epoch(
             model, train_loader, criterion, optimizer, scheduler, scaler,
@@ -608,6 +653,8 @@ def main():
             log_prior=log_prior,
             rc_consistency=rc_consistency,
             lambda_kl=lambda_kl,
+            periodic_save_fn=periodic_save_fn,
+            periodic_save_interval=5000,
         )
 
         va_loss, va_acc, va_f1, va_preds, va_true = validate(

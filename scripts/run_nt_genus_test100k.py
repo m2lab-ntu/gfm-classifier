@@ -84,7 +84,15 @@ def main():
     model_cfg = dict(cfg["model"]); model_cfg["gradient_checkpointing"] = False
     model = create_model(model_cfg, n_classes).to(device)
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
-    model.load_state_dict(ckpt["model_state_dict"])
+    _sd = ckpt["model_state_dict"]
+    _remapped = {}
+    for _k, _v in _sd.items():
+        _parts = _k.split(".")
+        if len(_parts) >= 2 and _parts[-1] in ("weight", "bias") and _parts[-2] in ("query", "key", "value"):
+            _remapped[".".join(_parts[:-1]) + ".base_layer." + _parts[-1]] = _v
+        else:
+            _remapped[_k] = _v
+    model.load_state_dict(_remapped, strict=False)
     model.eval()
     print(f"Loaded epoch {ckpt.get('epoch','?')}: {ckpt_path}")
 

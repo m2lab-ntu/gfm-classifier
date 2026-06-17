@@ -136,7 +136,23 @@ def main():
     model = create_model(model_cfg, num_classes).to(device)
 
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
-    model.load_state_dict(ckpt["model_state_dict"])
+    # Remap old peft (<0.6) key format to new peft (>=0.6) format.
+    # Old: backbone...query.weight  →  New: backbone...query.base_layer.weight
+    sd = ckpt["model_state_dict"]
+    remapped = {}
+    for k, v in sd.items():
+        parts = k.split(".")
+        # Find LoRA-wrapped linear layers: ends with .weight or .bias, parent is query/key/value
+        if len(parts) >= 2 and parts[-1] in ("weight", "bias") and parts[-2] in ("query", "key", "value"):
+            new_k = ".".join(parts[:-1]) + ".base_layer." + parts[-1]
+            remapped[new_k] = v
+        else:
+            remapped[k] = v
+    missing, unexpected = model.load_state_dict(remapped, strict=False)
+    if missing:
+        print(f"  [warn] Missing keys after remap ({len(missing)}): {missing[:3]}...")
+    if unexpected:
+        print(f"  [warn] Unexpected keys after remap ({len(unexpected)}): {unexpected[:3]}...")
     model.eval()
     print(f"\n✅ Loaded checkpoint (epoch {ckpt.get('epoch', '?')}): {checkpoint_path}")
 

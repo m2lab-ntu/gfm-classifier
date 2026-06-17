@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# Deprioritize this script's own directory so MetaTransformer's `utils` package
+# (utils/utils.py) takes precedence over scripts/utils.py in sys.path.
+import sys as _sys, os as _os
+_script_dir = _os.path.dirname(_os.path.abspath(__file__))
+if _script_dir in _sys.path:
+    _sys.path.remove(_script_dir)
+    _sys.path.append(_script_dir)
+del _sys, _os
+
 """
 Extract MT model predictions on a FASTA directory, save preds+probs+labels as npz.
 
@@ -67,11 +76,36 @@ def parse_fasta_dir(val_dir, class_index):
 def load_mt_model(exp_dir, vocab, device):
     exp_dir = Path(exp_dir)
     cfg = OmegaConf.load(exp_dir / "config.yaml")
+
+    # init_device_handler must be called before ClassificationTransformer.__init__
+    # which calls DeviceHandler.get_device() internally.
+    from utils.device_handler import init_device_handler
+    dev = cfg.get("device_settings", {})
+    init_device_handler(
+        use_cpu=dev.get("use_cpu", False),
+        gpu_count=dev.get("gpu_count", 1),
+        gpu_ids=dev.get("gpu_ids", None),
+        split_gpus=dev.get("split_gpus", False),
+    )
+
     vocab_size = len(vocab)
     net = instantiate_model_by_str_name(cfg.model.name, cfg, vocab_size)
     ckpt_path = exp_dir / "checkpoints" / "classification_transformer_ckpt_best.pt"
     state = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-    net.load_state_dict(state["model_state_dict"], strict=False)
+    # Reconcile vocab-size mismatches (off-by-one between training vocab and
+    # current vocab file): truncate or zero-pad the checkpoint embedding row.
+    ckpt_sd = state["model_state_dict"]
+    curr_sd = net.state_dict()
+    for key in list(ckpt_sd.keys()):
+        if key in curr_sd and ckpt_sd[key].shape != curr_sd[key].shape:
+            c_shape, k_shape = curr_sd[key].shape, ckpt_sd[key].shape
+            if c_shape[0] != k_shape[0]:
+                if k_shape[0] > c_shape[0]:
+                    ckpt_sd[key] = ckpt_sd[key][:c_shape[0]]
+                else:
+                    pad = torch.zeros(c_shape[0] - k_shape[0], *k_shape[1:])
+                    ckpt_sd[key] = torch.cat([ckpt_sd[key], pad], dim=0)
+    net.load_state_dict(ckpt_sd, strict=False)
     net.eval().to(device)
     transforms = read_transforms_for_input_layer(
         cfg.mdl_common.input_module, cfg, vocab, train=False
