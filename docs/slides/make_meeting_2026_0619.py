@@ -3,13 +3,16 @@
 Weekly meeting deck · 2026-06-19
 Covers progress 2026-06-09 → 2026-06-19.
 Key story: Scaling NT-v2 genus 50M → 258M did NOT improve accuracy —
-           it dropped (66.6% → ~44.5%). A code+data audit traced the
-           regression to a data-pipeline defect, NOT genus imbalance:
-           the DDP lazy loader (_read_seq) reads only the first line of
-           each record, so on the line-wrapped 258M FASTA every 150 bp
-           read was truncated to 60 bp. The 66.6% baseline is also
-           inflated by 100K-test/50M-train leakage. Fix the reader +
-           rebuild a clean test set before re-testing volume/balance.
+           it dropped (66.6% → ~44.5%). A code+data audit found TWO
+           compounding bugs:
+           (1) WRONG DATASET — v10/v12/v13 used the HPC 3,507-species
+               file instead of the correct CrucialX9 1,535-species version.
+           (2) READER BUG — train_ddp.py _read_seq reads only the first
+               line of each record; the 258M FASTA is 60-col wrapped, so
+               every 150 bp read was truncated to 60 bp.
+           The 66.6% v9 baseline is also inflated (test/train leakage).
+           Fix: switch to correct CrucialX9 data (on Nano4 since 6/17) +
+           patch _read_seq + rebuild clean test set.
 """
 
 import matplotlib
@@ -67,7 +70,7 @@ def fig_timeline():
         (5.6,  "6/14", "1st guess:\nclass_weights",          ORANGE, False),
         (7.2,  "6/14", "v12 + v13 fired\n(weights=F)",       TEAL,   True),
         (8.8,  "6/15", "v13 done\n44.5%",                    GREEN,  False),
-        (10.4, "6/18", "AUDIT: reads\ntruncated 60 bp",      RED,    True),
+        (10.4, "6/18", "AUDIT: wrong\ndataset + 60bp\nreader bug",      RED,    True),
         (12.0, "6/19", "TODAY\nfix + re-test",               GOLD,   False),
     ]
     for x, date, label, color, up in events:
@@ -152,14 +155,14 @@ def fig_v10_collapse():
              fontsize=13, fontweight="bold", color=NAVY, va="top")
 
     rows = [
-        (RED,    "Reads truncated 150 → 60 bp",
-                 "258M runs → train_ddp.py/_read_seq reads only the 1st\nline; 258M FASTA is 60-col wrapped → model saw 60 bp."),
-        (ORANGE, "v9 used a different, correct path",
-                 "train.py/_parse_fasta joins all lines (150 bp) on a\nsingle-line file. Same model, different reader → the gap."),
-        (TEAL,   "Baseline 66.6% is leakage-inflated",
+        (RED,    "Wrong dataset — primary cause",
+                 "v10/v12/v13 used HPC 3,507-species file; correct is\nCrucialX9 1,535-species (arrived on Nano4 2026-06-17)."),
+        (ORANGE, "Reads truncated 150 → 60 bp — compounds the damage",
+                 "train_ddp.py/_read_seq reads only 1st line; 258M FASTA\nis 60-col wrapped → model saw 40% of each read."),
+        (TEAL,   "v9 used a different, correct path",
+                 "train.py/_parse_fasta joins all lines (150 bp) on a\nsingle-line file. Same model, different reader."),
+        (GREEN,  "Baseline 66.6% is leakage-inflated",
                  "100K 'test' seq_ids are 100% inside the 50M train set\n→ v9's number is not a clean generalization metric."),
-        (GREEN,  "Imbalance is NOT the cause",
-                 "v9 349:1 vs v13 400:1 are ~identical, yet differ 22 pp.\nclass_weights only made v10 the worst (extra distortion)."),
     ]
     y = 0.84
     for color, title, body in rows:
@@ -189,10 +192,10 @@ def fig_experiments_table():
     ax.add_patch(Rectangle((0.02, header_y-0.03), 0.96, 0.004, facecolor=TEAL))
 
     rows = [
-        ("v9",  "50M bal.",  "scratch", "false", "30", "66.6%", "baseline ✓", GREEN),
-        ("v10", "258M",      "v9 warm", "TRUE",  "12*", "40.1%", "collapsed ✗", RED),
-        ("v12", "258M",      "v9 warm", "false", "3**", "45.4%", "plateau", ORANGE),
-        ("v13", "258M",      "scratch", "false", "25", "44.5%", "plateau", ORANGE),
+        ("v9",  "50M bal.\n(1535 sp.)",  "scratch", "false", "30", "66.6%", "baseline ✓", GREEN),
+        ("v10", "258M†\n(HPC 3507sp)", "v9 warm", "TRUE",  "12*", "40.1%", "collapsed ✗", RED),
+        ("v12", "258M†\n(HPC 3507sp)", "v9 warm", "false", "3**", "45.4%", "plateau", ORANGE),
+        ("v13", "258M†\n(HPC 3507sp)", "scratch", "false", "25", "44.5%", "plateau", ORANGE),
     ]
     y = header_y - 0.075
     for run, data, init, cw, ep, res, verdict, color in rows:
@@ -206,17 +209,21 @@ def fig_experiments_table():
             ax.text(cx, y, v, fontsize=10.5, color=c, fontweight=fw, va="center")
         y -= 0.105
 
-    ax.text(0.04, 0.18, "*  v10 early-stopped at epoch 12/15 (val_acc plateau).",
+    ax.text(0.04, 0.20, "*  v10 early-stopped at epoch 12/15 (val_acc plateau).",
             fontsize=8.8, color=GRAY)
-    ax.text(0.04, 0.135, "** v12 only reached 3 epochs — cold NFS = 476 min/epoch hit the 23 h wall.",
+    ax.text(0.04, 0.165, "** v12 only reached 3 epochs — cold NFS = 476 min/epoch hit the 23 h wall.",
             fontsize=8.8, color=GRAY)
+    ax.text(0.04, 0.128, "†  All three 258M runs used the HPC old 3,507-species file —",
+            fontsize=8.8, color=RED)
+    ax.text(0.04, 0.093, "   not the correct CrucialX9 1,535-species data (arrived on Nano4 2026-06-17).",
+            fontsize=8.8, color=RED)
 
-    ax.add_patch(FancyBboxPatch((0.02, 0.02), 0.96, 0.08,
+    ax.add_patch(FancyBboxPatch((0.02, 0.01), 0.96, 0.065,
                                 boxstyle="round,pad=0.01",
                                 facecolor="#FFF8E1", edgecolor=GOLD, linewidth=1.6))
-    ax.text(0.5, 0.072, "All three 258M runs cluster ~44–45% regardless of weights / init / epochs.",
+    ax.text(0.5, 0.055, "All three 258M runs: wrong dataset AND reader bug (60 bp) — both active simultaneously.",
             ha="center", fontsize=10.5, color=NAVY, fontweight="bold")
-    ax.text(0.5, 0.038, "A shared INPUT defect, not init/weights → audit: the 258M reads were truncated 150→60 bp.",
+    ax.text(0.5, 0.025, "Explains the 22 pp gap and why init/weights made no difference.",
             ha="center", fontsize=9.5, color=GOLD)
 
     plt.savefig(TMP/"experiments_table.png", bbox_inches="tight"); plt.close()
@@ -226,36 +233,59 @@ def fig_key_finding():
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
     fig.patch.set_facecolor("white")
 
-    # Left: effective read length seen by the model — the actual root cause
+    # Left: two compounding bugs as stacked boxes
     ax = axes[0]
-    labels = ["v9\ntrain.py\n_parse_fasta", "v10/12/13\ntrain_ddp.py\n_read_seq"]
-    vals   = [150, 60]
-    colors = [GREEN, RED]
-    bars = ax.bar(labels, vals, color=colors, width=0.55)
-    for b, v in zip(bars, vals):
-        ax.text(b.get_x()+b.get_width()/2, v+4, f"{v} bp", ha="center",
-                fontsize=12, fontweight="bold", color=GREEN if v==150 else RED)
-    ax.axhline(150, color=GREEN, linestyle=":", lw=1.2, alpha=0.5)
-    ax.set_ylim(0, 175); ax.set_ylabel("Read length fed to model (bp)")
-    ax.set_title("The model only saw 60 of 150 bp", fontsize=12, fontweight="bold", color=NAVY)
-    ax.annotate("−60%\ninput lost", xy=(1, 60), xytext=(0.55, 110),
-                fontsize=10, color=RED, fontweight="bold", ha="center",
-                arrowprops=dict(arrowstyle="->", color=RED, lw=1.6))
+    ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.text(0.5, 0.97, "Two Bugs, Both Active in All 258M Runs",
+            ha="center", fontsize=12, fontweight="bold", color=NAVY, va="top")
+
+    # Bug 1
+    ax.add_patch(FancyBboxPatch((0.03, 0.60), 0.94, 0.32,
+                                 boxstyle="round,pad=0.02",
+                                 facecolor=RED+"1A", edgecolor=RED, linewidth=2))
+    ax.text(0.08, 0.895, "Bug 1  —  Wrong Dataset  (primary)",
+            fontsize=11.5, fontweight="bold", color=RED, va="center")
+    ax.text(0.08, 0.790, "Used:    HPC 3,507-species file",
+            fontsize=10.5, color=RED, va="center")
+    ax.text(0.08, 0.685, "Correct: CrucialX9 1,535-species  (on Nano4 since 6/17)",
+            fontsize=10, color=NAVY, va="center")
+
+    ax.text(0.5, 0.565, "+", ha="center", fontsize=20, color=GRAY, fontweight="bold")
+
+    # Bug 2
+    ax.add_patch(FancyBboxPatch((0.03, 0.20), 0.94, 0.32,
+                                 boxstyle="round,pad=0.02",
+                                 facecolor=ORANGE+"1A", edgecolor=ORANGE, linewidth=2))
+    ax.text(0.08, 0.495, "Bug 2  —  Reader Truncation  (compounding)",
+            fontsize=11.5, fontweight="bold", color=ORANGE, va="center")
+    ax.text(0.08, 0.390, "train_ddp.py _read_seq reads only the 1st line",
+            fontsize=10, color=NAVY, va="center")
+    ax.text(0.08, 0.285, "258M FASTA is 60-col wrapped  →  150 bp fed as 60 bp to model",
+            fontsize=10, color=ORANGE, va="center")
+
+    # Bottom result box
+    ax.add_patch(FancyBboxPatch((0.03, 0.02), 0.94, 0.135,
+                                 boxstyle="round,pad=0.01",
+                                 facecolor="#FFF3E0", edgecolor=GOLD, linewidth=1.5))
+    ax.text(0.5, 0.115, "Both bugs active in ALL v10/v12/v13 → explains the full 22 pp gap",
+            ha="center", fontsize=10.5, color=NAVY, fontweight="bold")
+    ax.text(0.5, 0.060, "CrucialX9 is also 60-col wrapped — must fix reader after switching data",
+            ha="center", fontsize=9.5, color=GRAY)
 
     # Right: takeaway text
-    ax2 = axes[1]; ax2.axis("off"); ax2.set_xlim(0,1); ax2.set_ylim(0,1)
-    ax2.text(0.5, 0.97, "What the Audit Actually Found", ha="center",
+    ax2 = axes[1]; ax2.axis("off"); ax2.set_xlim(0, 1); ax2.set_ylim(0, 1)
+    ax2.text(0.5, 0.97, "What This Means", ha="center",
              fontsize=13, fontweight="bold", color=NAVY, va="top")
 
     points = [
-        (RED,    "A FASTA-reading bug, not a scaling limit",
-                 "_read_seq reads one line; the 258M file is 60-col\nwrapped → every 150 bp read truncated to 60 bp."),
-        (ORANGE, "Two code paths diverged",
-                 "v9 (train.py/_parse_fasta) reads full reads; the DDP\npath (train_ddp.py) does not. Same data, wrong reader."),
+        (RED,    "Wrong dataset invalidates all 258M runs",
+                 "3,507 sp. HPC vs 1,535 sp. test — different genus\ndistribution; model never saw the right label space."),
+        (ORANGE, "Reader bug compounds the damage",
+                 "_read_seq reads 1 line; CrucialX9 is also 60-col\nwrapped → must fix regardless of dataset swap."),
         (TEAL,   "The 66.6% baseline is leaky",
-                 "100K test ⊂ 50M train (100% overlap) → v9 is\ninflated; the honest baseline is unknown and lower."),
-        (GREEN,  "Volume / balance: NOT yet tested",
-                 "No 258M run saw full reads → we cannot conclude on\nvolume or balance until the reader is fixed."),
+                 "100K test ⊂ 50M train (100% overlap) → v9 is\ninflated; honest baseline will be lower."),
+        (GREEN,  "Correct data is on Nano4 — fix is ready",
+                 "CrucialX9 1,535 sp. at …/labeled_multi_level_1535sp/\nPatch _read_seq + rebuild test set → re-run."),
     ]
     y = 0.85
     for color, title, body in points:
@@ -323,13 +353,14 @@ def fig_next_steps():
             fontsize=14, fontweight="bold", color=NAVY, va="top")
 
     steps = [
-        ("Immediate fix (the actual bug)",  RED, [
-            ("Patch _read_seq",  "Read all lines until next '>' (multi-line FASTA) — ~5-line fix; verify reads = 150 bp"),
+        ("Immediate fixes (two bugs + leaky baseline)",  RED, [
+            ("Switch dataset",   "Use CrucialX9 1,535 sp. (/work/…/labeled_multi_level_1535sp/) — already on Nano4 since 6/17"),
+            ("Patch _read_seq",  "Read all lines until next '>' — CrucialX9 is also 60-col wrapped; verify reads = 150 bp"),
             ("Clean test set",   "Rebuild 100K test with ZERO seq_id overlap with training; re-baseline v9 honestly"),
         ]),
-        ("Re-run with full 150 bp reads", ORANGE, [
-            ("258M full-length", "Re-train 258M (weights=false, fixed reader) — the first real test of VOLUME"),
-            ("v14 250M balanced","subsample_balanced.py (job 118820, single-line) as a controlled BALANCE comparison"),
+        ("Re-run with correct data + full 150 bp reads", ORANGE, [
+            ("258M full-length", "Re-train correct 258M (weights=false, fixed reader) — first real test of VOLUME"),
+            ("v14 250M balanced","subsample_balanced.py (job 118820, single-line output) as controlled BALANCE comparison"),
         ]),
         ("Only then conclude", GREEN, [
             ("Volume",          "Does full-read 258M beat the clean v9 baseline? (finally a controlled answer)"),
@@ -413,7 +444,7 @@ def build():
     add_text_box(sl, "June 19, 2026", 1, 3.4, 11, 0.5,
                  fontsize=14, color="#BBDEFB", align=PP_ALIGN.CENTER)
 
-    bullets = "5× data → −22 pp  ·  root cause = reads truncated 150→60 bp  ·  baseline was leaky"
+    bullets = "5× data → −22 pp  ·  wrong dataset (3507 sp.) + reader bug (60 bp)  ·  baseline was leaky"
     add_text_box(sl, bullets, 1, 4.2, 11, 0.6,
                  fontsize=13, color=GOLD, align=PP_ALIGN.CENTER)
 
@@ -428,7 +459,7 @@ def build():
         ("6/11", "Fired v10 — 258M, warm-start from v9, class_weights=TRUE"),
         ("6/13", "v10 collapsed: 100K test 40.1% (vs v9 66.6%)"),
         ("6/14", "First guess: class_weights → fired v12 (warm) + v13 (scratch), both weights=false"),
-        ("6/15–18", "Both plateau ~44.5% (init/weights irrelevant) → audit found 258M reads truncated 150→60 bp"),
+        ("6/15–18", "Both plateau ~44.5% → audit found TWO bugs: wrong dataset (HPC 3507sp) + reads truncated 150→60 bp"),
     ]
     y = 5.05
     for date, text in rows:
@@ -442,7 +473,7 @@ def build():
 
     # ── Slide 4: v10 Collapse + Root Cause ────────────────────────────────────
     sl = add_slide(prs)
-    title_bar(sl, "v10 Collapse → Real Root Cause", "Not imbalance: the 258M reads were truncated 150→60 bp by the loader")
+    title_bar(sl, "v10 Collapse → Real Root Cause", "Two bugs: wrong dataset (HPC 3507 sp.) + reads truncated 150→60 bp")
     add_image(sl, TMP/"v10_collapse.png", 0.2, 1.2, 12.9, 5.2)
 
     # ── Slide 5: Experiments Table ────────────────────────────────────────────
@@ -452,7 +483,7 @@ def build():
 
     # ── Slide 6: Key Finding ──────────────────────────────────────────────────
     sl = add_slide(prs)
-    title_bar(sl, "Key Finding: a Read-Truncation Bug", "The 22 pp gap is a data-pipeline defect, not volume or balance")
+    title_bar(sl, "Key Finding: Two Compounding Bugs", "Wrong dataset (HPC 3507 sp.) + reader truncation — fix ready before any volume/balance claim")
     add_image(sl, TMP/"key_finding.png", 0.2, 1.2, 12.9, 5.2)
 
     # ── Slide 7: Infrastructure ───────────────────────────────────────────────
