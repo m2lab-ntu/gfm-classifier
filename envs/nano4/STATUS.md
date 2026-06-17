@@ -26,7 +26,6 @@
 |---|---|
 | Repo clone | `/work/ymj1123ntu/gfm-classifier/` (TBD) |
 | 1,535-sp source pool | `/work/ymj1123ntu/data/labeled_multi_level_1535sp/reads.fa` (uploading from CrucialX9) |
-| Subsampled 50M | TBD (generate on Nano4 via `subsample_balanced.py`) |
 | HF cache | TBD |
 
 ## Planned tasks (when migration complete)
