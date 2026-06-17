@@ -1,6 +1,6 @@
 # Nano4 — Status
 
-**Last updated**: 2026-06-17
+**Last updated**: 2026-06-17 (rsync of 1535sp source complete)
 **Host**: `25a-lgn04` (login node), compute nodes: `25a-hgpn*`
 **Service**: Free 1-month trial (target: cover 6/2026 thesis-finalisation + paper-prep)
 
@@ -45,7 +45,7 @@
 - [x] Sync training data (`reads_50M.fa`, `labels_50M.tsv`) from Nano5 via `sync_from_nano5.sh`
 - [x] Sync test data (`reads_100K.fa`, `labels_100K.tsv`, `in_db_mask.npy`)
 - [x] Sync NT-v2 model checkpoints (`nt_token_species_v4_50M_best.pt`)
-- [ ] Upload full 1,535-species source (258.7M reads, 47GB) from local CrucialX9 to `/work/ymj1123ntu/data/labeled_multi_level_1535sp/reads.fa` — then subsample on Nano4
+- [x] Upload full 1,535-species source (258.7M reads, 47GB) from local CrucialX9 to `/work/ymj1123ntu/data/labeled_multi_level_1535sp/reads.fa` — then subsample on Nano4
 - [ ] Sync DNABERT-2 50M `last.pt` (to resume training)
 - [ ] Sync MT models (from Taiwana-2 — for speed benchmark)
 - [x] Verify SLURM commands — `slurm/sanity_check_nano4.sh` ready
