@@ -7,7 +7,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH -t 01:00:00
+#SBATCH -t 03:00:00
 #SBATCH -o /work/ymj1123ntu/logs/prebuild_idx_250M-%j.out
 #SBATCH -e /work/ymj1123ntu/logs/prebuild_idx_250M-%j.err
 
