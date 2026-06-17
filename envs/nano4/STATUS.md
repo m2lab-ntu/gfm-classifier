@@ -1,6 +1,6 @@
 # Nano4 — Status
 
-**Last updated**: 2026-06-01
+**Last updated**: 2026-06-17
 **Host**: `nano4.nchc.org.tw`
 **GPU**: H200
 **Service**: Free 1-month trial (target: cover 6/2026 thesis-finalisation + paper-prep)
@@ -11,7 +11,8 @@
 - [ ] `conda` available, create `gfm` env
 - [ ] `git clone` this repo
 - [ ] Install Python deps (torch, transformers, peft, etc.)
-- [ ] Sync training data (`reads_50M.fa`, `labels_50M.tsv`) from TWCC via `rsync`
+- [ ] Upload full 1,535-species source (258.7M reads, 47GB) from local CrucialX9 to `/work/ymj1123ntu/data/labeled_multi_level_1535sp/reads.fa` — then subsample on Nano4
+- [ ] Sync existing `reads_50M.fa`, `labels_50M.tsv` from TWCC if needed for quick resume
 - [ ] Sync test data (`reads_100K.fa`, `labels_100K.tsv`, `in_db_mask.npy`)
 - [ ] Sync NT-v2 model checkpoints (best.pt for genus v9, species sp_v4)
 - [ ] Sync DNABERT-2 50M `last.pt` (to resume training)
@@ -24,7 +25,8 @@
 | Purpose | Path |
 |---|---|
 | Repo clone | `/work/ymj1123ntu/gfm-classifier/` (TBD) |
-| Training data | TBD |
+| 1,535-sp source pool | `/work/ymj1123ntu/data/labeled_multi_level_1535sp/reads.fa` (uploading from CrucialX9) |
+| Subsampled 50M | TBD (generate on Nano4 via `subsample_balanced.py`) |
 | HF cache | TBD |
 
 ## Planned tasks (when migration complete)
