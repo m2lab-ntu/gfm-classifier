@@ -3,9 +3,13 @@
 Weekly meeting deck · 2026-06-19
 Covers progress 2026-06-09 → 2026-06-19.
 Key story: Scaling NT-v2 genus 50M → 258M did NOT improve accuracy —
-           it dropped (66.6% → ~44.5%). Diagnosed the cause (class_weights
-           collapse + genus imbalance), and launched a 250M *balanced*
-           subsample to recover v9-quality data at scale (v14).
+           it dropped (66.6% → ~44.5%). A code+data audit traced the
+           regression to a data-pipeline defect, NOT genus imbalance:
+           the DDP lazy loader (_read_seq) reads only the first line of
+           each record, so on the line-wrapped 258M FASTA every 150 bp
+           read was truncated to 60 bp. The 66.6% baseline is also
+           inflated by 100K-test/50M-train leakage. Fix the reader +
+           rebuild a clean test set before re-testing volume/balance.
 """
 
 import matplotlib
@@ -60,11 +64,11 @@ def fig_timeline():
         (0.8,  "6/9",  "Benchmark done\n(7 models)",        TEAL,   True),
         (2.4,  "6/11", "v10 258M fired\n(warm, weights=T)",  TEAL,   False),
         (4.0,  "6/13", "v10 COLLAPSE\ntest 40.1%",           RED,    True),
-        (5.6,  "6/14", "Root cause:\nclass_weights",         ORANGE, False),
+        (5.6,  "6/14", "1st guess:\nclass_weights",          ORANGE, False),
         (7.2,  "6/14", "v12 + v13 fired\n(weights=F)",       TEAL,   True),
         (8.8,  "6/15", "v13 done\n44.5%",                    GREEN,  False),
-        (10.4, "6/18", "250M balanced\nsubsample run",       PURPLE, True),
-        (12.0, "6/19", "TODAY\nv14 ready",                   GOLD,   False),
+        (10.4, "6/18", "AUDIT: reads\ntruncated 60 bp",      RED,    True),
+        (12.0, "6/19", "TODAY\nfix + re-test",               GOLD,   False),
     ]
     for x, date, label, color, up in events:
         ax.scatter(x, 2.565, s=200, color=color, zorder=4, edgecolor="white", linewidth=2)
@@ -139,22 +143,23 @@ def fig_v10_collapse():
     ax.text(9, 42.0, "v10 100K test = 40.1%", color=ORANGE, fontsize=9, ha="center")
     ax.set_ylim(15, 72); ax.set_xlim(0.5, 12.5)
     ax.set_xlabel("Epoch"); ax.set_ylabel("Val accuracy (%)")
-    ax.set_title("v10: val_acc frozen at ~21%", fontsize=12, fontweight="bold", color=RED)
+    ax.set_title("v10: val_acc frozen ~21% (weights + 60 bp reads)",
+                 fontsize=11.5, fontweight="bold", color=RED)
 
     # Right: root-cause box
     ax2 = axes[1]; ax2.axis("off"); ax2.set_xlim(0,1); ax2.set_ylim(0,1)
-    ax2.text(0.5, 0.97, "Root Cause (confirmed 6/14)", ha="center",
+    ax2.text(0.5, 0.97, "Real Root Cause (code+data audit, 6/18)", ha="center",
              fontsize=13, fontweight="bold", color=NAVY, va="top")
 
     rows = [
-        (RED,    "class_weights = TRUE",
-                 "Loss re-weighted by inverse genus frequency,\ncapped at 10×."),
-        (RED,    "Genus imbalance ≈ 400 : 1",
-                 "258M is species-balanced, but genera hold very\ndifferent #species → 400:1 at genus level."),
-        (ORANGE, "Distorted loss",
-                 "10× weight on rare genera dominates the gradient\n→ model chases tail, collapses on head."),
-        (GREEN,  "v9 proof",
-                 "50M had 349:1 imbalance and NO weighting →\n66.6%. Weighting was the sole collapse cause."),
+        (RED,    "Reads truncated 150 → 60 bp",
+                 "258M runs → train_ddp.py/_read_seq reads only the 1st\nline; 258M FASTA is 60-col wrapped → model saw 60 bp."),
+        (ORANGE, "v9 used a different, correct path",
+                 "train.py/_parse_fasta joins all lines (150 bp) on a\nsingle-line file. Same model, different reader → the gap."),
+        (TEAL,   "Baseline 66.6% is leakage-inflated",
+                 "100K 'test' seq_ids are 100% inside the 50M train set\n→ v9's number is not a clean generalization metric."),
+        (GREEN,  "Imbalance is NOT the cause",
+                 "v9 349:1 vs v13 400:1 are ~identical, yet differ 22 pp.\nclass_weights only made v10 the worst (extra distortion)."),
     ]
     y = 0.84
     for color, title, body in rows:
@@ -209,9 +214,9 @@ def fig_experiments_table():
     ax.add_patch(FancyBboxPatch((0.02, 0.02), 0.96, 0.08,
                                 boxstyle="round,pad=0.01",
                                 facecolor="#FFF8E1", edgecolor=GOLD, linewidth=1.6))
-    ax.text(0.5, 0.072, "All three 258M runs converge to ~44–45%, far below v9's balanced 66.6%.",
+    ax.text(0.5, 0.072, "All three 258M runs cluster ~44–45% regardless of weights / init / epochs.",
             ha="center", fontsize=10.5, color=NAVY, fontweight="bold")
-    ax.text(0.5, 0.038, "Warm-start vs scratch made no difference → the ceiling is set by the DATA, not the init.",
+    ax.text(0.5, 0.038, "A shared INPUT defect, not init/weights → audit: the 258M reads were truncated 150→60 bp.",
             ha="center", fontsize=9.5, color=GOLD)
 
     plt.savefig(TMP/"experiments_table.png", bbox_inches="tight"); plt.close()
@@ -221,36 +226,36 @@ def fig_key_finding():
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
     fig.patch.set_facecolor("white")
 
-    # Left: balanced vs unbalanced result bars
+    # Left: effective read length seen by the model — the actual root cause
     ax = axes[0]
-    labels = ["v9\n50M\nbalanced", "v13\n258M\nimbalanced", "v14\n250M\nbalanced"]
-    vals   = [66.6, 44.5, 66.6]
-    colors = [GREEN, RED, "#B0BEC5"]
-    bars = ax.bar(labels, vals, color=colors, width=0.6,
-                  hatch=["", "", "//"], edgecolor=["none","none",GREEN])
-    for b, v, i in zip(bars, vals, range(3)):
-        txt = f"{v:.1f}%" + ("  (target)" if i == 2 else "")
-        ax.text(b.get_x()+b.get_width()/2, v+1.0, txt, ha="center",
-                fontsize=10, fontweight="bold",
-                color=GREEN if i != 1 else RED)
-    ax.set_ylim(0, 80); ax.set_ylabel("Genus accuracy (%)")
-    ax.set_title("It is the BALANCE, not the volume", fontsize=12, fontweight="bold", color=NAVY)
-    ax.text(2, 50, "v14\nrunning", ha="center", fontsize=9, color=GREEN, style="italic")
+    labels = ["v9\ntrain.py\n_parse_fasta", "v10/12/13\ntrain_ddp.py\n_read_seq"]
+    vals   = [150, 60]
+    colors = [GREEN, RED]
+    bars = ax.bar(labels, vals, color=colors, width=0.55)
+    for b, v in zip(bars, vals):
+        ax.text(b.get_x()+b.get_width()/2, v+4, f"{v} bp", ha="center",
+                fontsize=12, fontweight="bold", color=GREEN if v==150 else RED)
+    ax.axhline(150, color=GREEN, linestyle=":", lw=1.2, alpha=0.5)
+    ax.set_ylim(0, 175); ax.set_ylabel("Read length fed to model (bp)")
+    ax.set_title("The model only saw 60 of 150 bp", fontsize=12, fontweight="bold", color=NAVY)
+    ax.annotate("−60%\ninput lost", xy=(1, 60), xytext=(0.55, 110),
+                fontsize=10, color=RED, fontweight="bold", ha="center",
+                arrowprops=dict(arrowstyle="->", color=RED, lw=1.6))
 
     # Right: takeaway text
     ax2 = axes[1]; ax2.axis("off"); ax2.set_xlim(0,1); ax2.set_ylim(0,1)
-    ax2.text(0.5, 0.97, "What 258M Taught Us", ha="center",
+    ax2.text(0.5, 0.97, "What the Audit Actually Found", ha="center",
              fontsize=13, fontweight="bold", color=NAVY, va="top")
 
     points = [
-        (GREEN,  "Volume is not the bottleneck",
-                 "5× more reads did not help; both warm & scratch\nplateau ~44.5%."),
-        (RED,    "Imbalance IS the bottleneck",
-                 "400:1 genus skew lets head genera dominate;\ntail genera never learn."),
-        (ORANGE, "Weighting is a trap",
-                 "Naive inverse-freq weighting (v10) collapses;\nremoving it (v12/13) only recovers to ~45%."),
-        (TEAL,   "The fix = balance the data",
-                 "Recreate v9's balanced recipe AT 250M scale\ninstead of re-weighting the loss."),
+        (RED,    "A FASTA-reading bug, not a scaling limit",
+                 "_read_seq reads one line; the 258M file is 60-col\nwrapped → every 150 bp read truncated to 60 bp."),
+        (ORANGE, "Two code paths diverged",
+                 "v9 (train.py/_parse_fasta) reads full reads; the DDP\npath (train_ddp.py) does not. Same data, wrong reader."),
+        (TEAL,   "The 66.6% baseline is leaky",
+                 "100K test ⊂ 50M train (100% overlap) → v9 is\ninflated; the honest baseline is unknown and lower."),
+        (GREEN,  "Volume / balance: NOT yet tested",
+                 "No 258M run saw full reads → we cannot conclude on\nvolume or balance until the reader is fixed."),
     ]
     y = 0.85
     for color, title, body in points:
@@ -314,21 +319,21 @@ def fig_infra():
 def fig_next_steps():
     fig, ax = plt.subplots(figsize=(13, 5))
     ax.axis("off"); ax.set_xlim(0,1); ax.set_ylim(0,1)
-    ax.text(0.5, 0.97, "Next Steps · v14 = 250M balanced", ha="center",
+    ax.text(0.5, 0.97, "Next Steps · Fix the reader, then re-test", ha="center",
             fontsize=14, fontweight="bold", color=NAVY, va="top")
 
     steps = [
-        ("In progress now",  RED, [
-            ("250M subsample",  "subsample_balanced.py (job 118820) — Pass 2 reservoir sampling running"),
-            ("Spec",            "1535 species × 162,866 reads = balanced 250M (min 145K / max 184K)"),
+        ("Immediate fix (the actual bug)",  RED, [
+            ("Patch _read_seq",  "Read all lines until next '>' (multi-line FASTA) — ~5-line fix; verify reads = 150 bp"),
+            ("Clean test set",   "Rebuild 100K test with ZERO seq_id overlap with training; re-baseline v9 honestly"),
         ]),
-        ("This week", ORANGE, [
-            ("v14 training",    "Same pipeline as v9 (class_weights=false) on balanced 250M, 64-GPU DDP"),
-            ("v13 100K test",   "Evaluate v13 best.pt on 100K independent test (currently val-only)"),
+        ("Re-run with full 150 bp reads", ORANGE, [
+            ("258M full-length", "Re-train 258M (weights=false, fixed reader) — the first real test of VOLUME"),
+            ("v14 250M balanced","subsample_balanced.py (job 118820, single-line) as a controlled BALANCE comparison"),
         ]),
-        ("Expected outcome", GREEN, [
-            ("Hypothesis",      "Balanced 250M ≥ v9 66.6% → confirms data-balance is the lever"),
-            ("If confirmed",    "Clean scaling story for thesis: balance, then scale"),
+        ("Only then conclude", GREEN, [
+            ("Volume",          "Does full-read 258M beat the clean v9 baseline? (finally a controlled answer)"),
+            ("Balance",         "v14 vs full-read 258M isolates balance — meaningful only after the reader fix"),
         ]),
     ]
     y = 0.86
@@ -403,12 +408,12 @@ def build():
 
     add_text_box(sl, "Weekly Progress Update", 1, 1.5, 11, 1,
                  fontsize=38, color=WHITE, bold=True, align=PP_ALIGN.CENTER)
-    add_text_box(sl, "Scaling NT-v2 Genus 50M → 258M · the data-balance bottleneck",
+    add_text_box(sl, "Scaling NT-v2 Genus 50M → 258M · debugging a 22 pp regression",
                  1, 2.7, 11, 0.6, fontsize=16, color="#90CAF9", align=PP_ALIGN.CENTER)
     add_text_box(sl, "June 19, 2026", 1, 3.4, 11, 0.5,
                  fontsize=14, color="#BBDEFB", align=PP_ALIGN.CENTER)
 
-    bullets = "5× data → −22 pp  ·  root cause diagnosed  ·  250M balanced subset (v14) firing"
+    bullets = "5× data → −22 pp  ·  root cause = reads truncated 150→60 bp  ·  baseline was leaky"
     add_text_box(sl, bullets, 1, 4.2, 11, 0.6,
                  fontsize=13, color=GOLD, align=PP_ALIGN.CENTER)
 
@@ -422,8 +427,8 @@ def build():
     rows = [
         ("6/11", "Fired v10 — 258M, warm-start from v9, class_weights=TRUE"),
         ("6/13", "v10 collapsed: 100K test 40.1% (vs v9 66.6%)"),
-        ("6/14", "Diagnosed class_weights × 400:1 imbalance → fired v12 (warm) + v13 (scratch), weights=false"),
-        ("6/15–18", "Both plateau ~44.5% → launched 250M *balanced* subsample for v14"),
+        ("6/14", "First guess: class_weights → fired v12 (warm) + v13 (scratch), both weights=false"),
+        ("6/15–18", "Both plateau ~44.5% (init/weights irrelevant) → audit found 258M reads truncated 150→60 bp"),
     ]
     y = 5.05
     for date, text in rows:
@@ -437,7 +442,7 @@ def build():
 
     # ── Slide 4: v10 Collapse + Root Cause ────────────────────────────────────
     sl = add_slide(prs)
-    title_bar(sl, "v10 Collapse → Root Cause", "class_weights=TRUE on a 400:1 imbalance distorted the loss")
+    title_bar(sl, "v10 Collapse → Real Root Cause", "Not imbalance: the 258M reads were truncated 150→60 bp by the loader")
     add_image(sl, TMP/"v10_collapse.png", 0.2, 1.2, 12.9, 5.2)
 
     # ── Slide 5: Experiments Table ────────────────────────────────────────────
@@ -447,7 +452,7 @@ def build():
 
     # ── Slide 6: Key Finding ──────────────────────────────────────────────────
     sl = add_slide(prs)
-    title_bar(sl, "Key Finding: Balance > Volume", "The ceiling is set by class balance, not by #reads")
+    title_bar(sl, "Key Finding: a Read-Truncation Bug", "The 22 pp gap is a data-pipeline defect, not volume or balance")
     add_image(sl, TMP/"key_finding.png", 0.2, 1.2, 12.9, 5.2)
 
     # ── Slide 7: Infrastructure ───────────────────────────────────────────────
@@ -457,7 +462,7 @@ def build():
 
     # ── Slide 8: Next Steps ───────────────────────────────────────────────────
     sl = add_slide(prs)
-    title_bar(sl, "Next Steps · v14 = 250M Balanced", "Recreate v9's balanced recipe at 5× scale")
+    title_bar(sl, "Next Steps · Fix the Reader, then Re-test", "Patch _read_seq + clean test set before any volume/balance claim")
     add_image(sl, TMP/"next_steps.png", 0.2, 1.1, 12.9, 5.9)
 
     prs.save(OUT)
