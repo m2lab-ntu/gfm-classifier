@@ -19,6 +19,8 @@ import random
 import sys
 from collections import defaultdict
 
+import numpy as np
+
 
 def parse_header(header: str):
     """Parse >lbl|species_class|species_name|genus_class|genus_name-readid/pair"""
@@ -93,93 +95,84 @@ def main():
     print(f"\n  Target: {args.total_reads:,}, Allocated: {final_total:,}")
     print(f"  Per-class: min={min_q:,}, max={max_q:,}, target={per_class_target:,}")
 
-    # --- Pass 2: Reservoir sampling per class ---
-    print(f"\nPass 2: Reservoir sampling ...")
-    reservoirs = defaultdict(list)
-    class_seen = defaultdict(int)
+    # --- Pre-compute per-class keep masks (memory-light) ---
+    # Reservoir-in-RAM blows up for large outputs (250M reads ≈ 100+ GB in
+    # Python objects → OOM). Since the train/val split and DataLoader both
+    # shuffle downstream, the output FASTA does NOT need a global shuffle.
+    # Instead we pre-decide which of each class's occurrences to keep as a
+    # boolean mask (sum of all masks = total reads ≈ 258M bools ≈ 260 MB),
+    # then stream-read the FASTA and write selected reads immediately.
+    print(f"\nBuilding per-class keep masks ...")
+    np_rng = np.random.default_rng(args.seed)
+    keep_mask = {}
+    for cls_id in sorted(class_counts.keys()):
+        avail = class_counts[cls_id]
+        q = quota[cls_id]
+        if q >= avail:
+            keep_mask[cls_id] = np.ones(avail, dtype=bool)
+        else:
+            m = np.zeros(avail, dtype=bool)
+            sel = np_rng.choice(avail, size=q, replace=False)
+            m[sel] = True
+            keep_mask[cls_id] = m
 
-    with open(args.input, "r") as f:
+    # --- Pass 2: stream-read, write selected reads directly ---
+    print(f"\nPass 2: streaming write ...")
+    from collections import Counter
+    class_seen = defaultdict(int)
+    genus_dist = Counter()
+    species_dist = Counter()
+    out_idx = 0
+
+    def emit(header, seq, f_fa, f_tsv):
+        nonlocal out_idx
+        sp_cls, sp_name, gen_cls, gen_name = parse_header(header)
+        key = sp_cls if args.balance_by == "species" else gen_cls
+        i = class_seen[key]
+        class_seen[key] += 1
+        if not keep_mask[key][i]:
+            return
+        clean = header.lstrip(">")
+        f_fa.write(f">{clean}\n{seq}\n")
+        f_tsv.write(f"{out_idx}\t{clean}\t{sp_cls}\t{gen_cls}\t{gen_name}\t{sp_name}\n")
+        genus_dist[gen_name] += 1
+        species_dist[sp_cls] += 1
+        out_idx += 1
+
+    with open(args.input, "r") as f, \
+         open(args.output_fasta, "w") as f_fa, \
+         open(args.output_labels, "w") as f_tsv:
+        f_tsv.write("idx\tseq_id\tspecies_class\tgenus_class\tgenus_name\tspecies_name\n")
         header = None
         seq_lines = []
         reads_processed = 0
-
         for line in f:
             if line.startswith(">"):
                 if header is not None:
-                    sp_cls, sp_name, gen_cls, gen_name = parse_header(header)
-                    key = sp_cls if args.balance_by == "species" else gen_cls
-                    seq = "".join(seq_lines)
-                    idx = class_seen[key]
-                    class_seen[key] += 1
-
-                    target = quota[key]
-                    if idx < target:
-                        reservoirs[key].append((header, seq, sp_cls, sp_name, gen_cls, gen_name))
-                    else:
-                        j = random.randint(0, idx)
-                        if j < target:
-                            reservoirs[key][j] = (header, seq, sp_cls, sp_name, gen_cls, gen_name)
-
+                    emit(header, "".join(seq_lines), f_fa, f_tsv)
                     reads_processed += 1
                     if reads_processed % 10_000_000 == 0:
-                        print(f"  ... processed {reads_processed / 1e6:.0f}M reads", flush=True)
-
+                        print(f"  ... processed {reads_processed / 1e6:.0f}M reads "
+                              f"(written {out_idx / 1e6:.1f}M)", flush=True)
                 header = line.strip()
                 seq_lines = []
             else:
                 seq_lines.append(line.strip())
-
         # last record
         if header is not None:
-            sp_cls, sp_name, gen_cls, gen_name = parse_header(header)
-            key = sp_cls if args.balance_by == "species" else gen_cls
-            seq = "".join(seq_lines)
-            idx = class_seen[key]
-            target = quota[key]
-            if idx < target:
-                reservoirs[key].append((header, seq, sp_cls, sp_name, gen_cls, gen_name))
-            else:
-                j = random.randint(0, idx)
-                if j < target:
-                    reservoirs[key][j] = (header, seq, sp_cls, sp_name, gen_cls, gen_name)
-
-    # --- Collect and shuffle ---
-    all_records = []
-    for key in sorted(reservoirs.keys()):
-        all_records.extend(reservoirs[key])
-
-    random.shuffle(all_records)
-    print(f"\n  Collected {len(all_records):,} reads")
-
-    # --- Write outputs ---
-    print(f"\nWriting {args.output_fasta} ...")
-    with open(args.output_fasta, "w") as f_fa:
-        for header, seq, _, _, _, _ in all_records:
-            clean = header.lstrip(">")
-            f_fa.write(f">{clean}\n{seq}\n")
-
-    print(f"Writing {args.output_labels} ...")
-    with open(args.output_labels, "w") as f_tsv:
-        f_tsv.write("idx\tseq_id\tspecies_class\tgenus_class\tgenus_name\tspecies_name\n")
-        for i, (header, seq, sp_cls, sp_name, gen_cls, gen_name) in enumerate(all_records):
-            seq_id = header.lstrip(">")
-            f_tsv.write(f"{i}\t{seq_id}\t{sp_cls}\t{gen_cls}\t{gen_name}\t{sp_name}\n")
+            emit(header, "".join(seq_lines), f_fa, f_tsv)
 
     # --- Summary stats ---
-    from collections import Counter
-    genus_dist = Counter(r[4] for r in all_records)
-    species_dist = Counter(r[2] for r in all_records)
-
     print(f"\n=== Summary ===")
-    print(f"  Total reads: {len(all_records):,}")
+    print(f"  Total reads: {out_idx:,}")
     print(f"  Unique genera: {len(genus_dist)}")
     print(f"  Unique species: {len(species_dist)}")
     print(f"  Reads per species: min={min(species_dist.values()):,}, "
           f"max={max(species_dist.values()):,}, "
           f"mean={sum(species_dist.values())/len(species_dist):.0f}")
     print(f"\n  Top 10 genera:")
-    for gen_cls, count in genus_dist.most_common(10):
-        print(f"    genus {gen_cls}: {count:,}")
+    for gen_name, count in genus_dist.most_common(10):
+        print(f"    {gen_name}: {count:,}")
 
     print(f"\nDone!")
 
