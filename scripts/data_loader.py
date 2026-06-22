@@ -36,6 +36,64 @@ def _parse_fasta(fasta_path: str):
     return seq_ids, sequences
 
 
+def load_test_data(
+    fasta_path: str,
+    labels_path: str,
+    task: str = "genus",
+) -> dict:
+    """
+    Load a test/eval FASTA + labels TSV without any train/val split.
+    All reads are returned as the 'val' split for use with evaluate.py.
+    """
+    print(f"Loading test labels: {labels_path}")
+    df = pd.read_csv(labels_path, sep="\t", dtype={"species_class": int, "genus_class": int})
+
+    id2genus   = dict(zip(df["genus_class"],   df["genus_name"]))
+    id2species = dict(zip(df["species_class"], df["species_name"]))
+    num_genera  = int(df["genus_class"].nunique())
+    num_species = int(df["species_class"].nunique())
+    print(f"  {num_genera} genera, {num_species} species")
+
+    seq_id_to_genus   = dict(zip(df["seq_id"], df["genus_class"]))
+    seq_id_to_species = dict(zip(df["seq_id"], df["species_class"]))
+
+    print(f"Loading test FASTA: {fasta_path}")
+    seq_ids, sequences = _parse_fasta(fasta_path)
+    print(f"  Parsed {len(sequences):,} reads")
+
+    matched_seqs, genus_labels, species_labels = [], [], []
+    missing = 0
+    for sid, seq in zip(seq_ids, sequences):
+        g = seq_id_to_genus.get(sid)
+        s = seq_id_to_species.get(sid)
+        if g is None or s is None:
+            missing += 1
+            continue
+        matched_seqs.append(seq)
+        genus_labels.append(g)
+        species_labels.append(s)
+    if missing:
+        print(f"  Dropped {missing:,} reads with no label match")
+    print(f"  Matched {len(matched_seqs):,} reads")
+
+    seqs_arr    = np.array(matched_seqs,  dtype=object)
+    genus_arr   = np.array(genus_labels,  dtype=np.int64)
+    species_arr = np.array(species_labels, dtype=np.int64)
+
+    return {
+        "train_sequences":      seqs_arr[:0],
+        "val_sequences":        seqs_arr,
+        "train_genus_labels":   genus_arr[:0],
+        "val_genus_labels":     genus_arr,
+        "train_species_labels": species_arr[:0],
+        "val_species_labels":   species_arr,
+        "num_genera":           num_genera,
+        "num_species":          num_species,
+        "id2genus":             id2genus,
+        "id2species":           id2species,
+    }
+
+
 def load_data(
     fasta_path: str,
     labels_path: str,

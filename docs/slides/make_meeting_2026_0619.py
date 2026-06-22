@@ -358,13 +358,13 @@ def fig_next_steps():
             ("Patch _read_seq",  "Read all lines until next '>' — CrucialX9 is also 60-col wrapped; verify reads = 150 bp"),
             ("Clean test set",   "Rebuild 100K test with ZERO seq_id overlap with training; re-baseline v9 honestly"),
         ]),
-        ("Re-run with correct data + full 150 bp reads", ORANGE, [
-            ("258M full-length", "Re-train correct 258M (weights=false, fixed reader) — first real test of VOLUME"),
-            ("v14 250M balanced","subsample_balanced.py (job 118820, single-line output) as controlled BALANCE comparison"),
+        ("Already running on correct data (live now)", ORANGE, [
+            ("v14 250M balanced","From scratch, single-line FASTA — epoch 7/25 → 62% and rising"),
+            ("v15 250M balanced","Warm-start from v9, LR 10× lower — epoch 4/15 → 66.5%, no collapse"),
         ]),
-        ("Only then conclude", GREEN, [
-            ("Volume",          "Does full-read 258M beat the clean v9 baseline? (finally a controlled answer)"),
-            ("Balance",         "v14 vs full-read 258M isolates balance — meaningful only after the reader fix"),
+        ("Next, to conclude cleanly", GREEN, [
+            ("Clean 100K test", "Run independent zero-overlap test on v14/v15 best.pt once converged"),
+            ("258M full-length","Re-train correct 258M (fixed reader) — isolates VOLUME vs the 250M balance runs"),
         ]),
     ]
     y = 0.86
@@ -382,6 +382,80 @@ def fig_next_steps():
 
     plt.tight_layout()
     plt.savefig(TMP/"next_steps.png"); plt.close()
+
+
+def fig_live_progress():
+    """Fix in action: v14 (scratch) + v15 (warm) on CORRECT 1535sp balanced data."""
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.9))
+    fig.patch.set_facecolor("white")
+
+    # ── Left: live val_acc curves ──
+    ax = axes[0]
+    v14_ep  = [1, 2, 3, 4, 5, 6, 7]
+    v14_val = [55.27, 58.82, 59.84, 60.61, 61.20, 61.66, 62.03]
+    v15_ep  = [1, 2, 3, 4]
+    v15_val = [66.41, 66.45, 66.48, 66.50]
+
+    ax.plot(v15_ep, v15_val, "o-", color=GREEN, lw=2.4, ms=8,
+            label="v15  warm-start v9  (250M bal.)")
+    ax.plot(v14_ep, v14_val, "s-", color=TEAL, lw=2.4, ms=7,
+            label="v14  from scratch  (250M bal.)")
+
+    # reference lines
+    ax.axhline(66.6, color=GOLD, ls="--", lw=1.5, alpha=0.8)
+    ax.text(7.0, 67.4, "v9 baseline 66.6% (leaky)", color=GOLD, fontsize=8.7, ha="right")
+    ax.axhline(44.5, color=RED, ls=":", lw=1.6, alpha=0.8)
+    ax.text(7.0, 45.3, "v10/v12/v13 wrong-data collapse ~44.5%",
+            color=RED, fontsize=8.7, ha="right")
+
+    # annotate latest points
+    ax.annotate(f"{v14_val[-1]:.1f}%  ↑ still rising",
+                xy=(v14_ep[-1], v14_val[-1]), xytext=(4.6, 57.5),
+                fontsize=9, color=TEAL, fontweight="bold",
+                arrowprops=dict(arrowstyle="->", color=TEAL, alpha=0.6))
+    ax.annotate(f"{v15_val[-1]:.1f}%  holds v9 level",
+                xy=(v15_ep[-1], v15_val[-1]), xytext=(1.2, 61.0),
+                fontsize=9, color=GREEN, fontweight="bold",
+                arrowprops=dict(arrowstyle="->", color=GREEN, alpha=0.6))
+
+    ax.set_xlim(0.5, 7.6); ax.set_ylim(42, 70)
+    ax.set_xlabel("Epoch"); ax.set_ylabel("Val accuracy (%)")
+    ax.set_title("Correct data → both runs healthy (live)",
+                 fontsize=12, fontweight="bold", color=NAVY)
+    ax.legend(loc="lower right", fontsize=8.6, framealpha=0.9)
+
+    # ── Right: status / interpretation ──
+    ax2 = axes[1]; ax2.axis("off"); ax2.set_xlim(0, 1); ax2.set_ylim(0, 1)
+    ax2.text(0.5, 0.97, "Two Runs Live on Nano4 (64-GPU DDP)", ha="center",
+             fontsize=12.5, fontweight="bold", color=NAVY, va="top")
+
+    rows = [
+        (TEAL,  "v14 · from scratch · job 121437",
+                "250M balanced, correct 1535sp, single-line FASTA.\nEpoch 7/25 → 62.0% and climbing, no plateau."),
+        (GREEN, "v15 · warm-start from v9 · job 122325",
+                "Same data, LR 10× lower (3e-5). Epoch 4/15 → 66.5%,\nstable — no v12-style warm-start collapse."),
+        (RED,   "Already beats every 258M run by epoch 2",
+                "v14 passed the 44.5% wrong-data ceiling at epoch 2;\nproves the gap was DATA, not model or scale."),
+    ]
+    y = 0.83
+    for color, title, body in rows:
+        ax2.add_patch(FancyBboxPatch((0.03, y-0.135), 0.94, 0.155,
+                                     boxstyle="round,pad=0.01",
+                                     facecolor=color+"18", edgecolor=color, linewidth=1.4))
+        ax2.text(0.07, y+0.005, title, fontsize=10.2, color=color, fontweight="bold", va="top")
+        ax2.text(0.07, y-0.05, body, fontsize=9.2, color=NAVY, va="top")
+        y -= 0.205
+
+    ax2.add_patch(FancyBboxPatch((0.03, 0.02), 0.94, 0.11,
+                                 boxstyle="round,pad=0.01",
+                                 facecolor="#FFF8E1", edgecolor=GOLD, linewidth=1.5))
+    ax2.text(0.5, 0.097, "Caveat: these are in-training val on balanced data.",
+             ha="center", fontsize=9.3, color=NAVY, fontweight="bold")
+    ax2.text(0.5, 0.050, "Clean independent 100K test pending run completion.",
+             ha="center", fontsize=8.8, color=GRAY)
+
+    plt.tight_layout()
+    plt.savefig(TMP/"live_progress.png"); plt.close()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -425,6 +499,7 @@ def build():
     fig_v10_collapse()
     fig_experiments_table()
     fig_key_finding()
+    fig_live_progress()
     fig_infra()
     fig_next_steps()
 
@@ -486,7 +561,13 @@ def build():
     title_bar(sl, "Key Finding: Two Compounding Bugs", "Wrong dataset (HPC 3507 sp.) + reader truncation — fix ready before any volume/balance claim")
     add_image(sl, TMP/"key_finding.png", 0.2, 1.2, 12.9, 5.2)
 
-    # ── Slide 7: Infrastructure ───────────────────────────────────────────────
+    # ── Slide 7: Fix in Action (live training) ────────────────────────────────
+    sl = add_slide(prs)
+    title_bar(sl, "Fix in Action — Live Training",
+              "Correct 1535sp data + single-line FASTA: v14 (scratch) climbing, v15 (warm) holds 66.5%")
+    add_image(sl, TMP/"live_progress.png", 0.2, 1.2, 12.9, 5.2)
+
+    # ── Slide 8: Infrastructure ───────────────────────────────────────────────
     sl = add_slide(prs)
     title_bar(sl, "Infrastructure Lessons (64-GPU DDP)")
     add_image(sl, TMP/"infra.png", 0.2, 1.2, 12.9, 5.2)

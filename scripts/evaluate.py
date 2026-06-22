@@ -58,7 +58,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from data_loader import load_data
+from data_loader import load_data, load_test_data
 from dataset import TokenLevelReadDataset
 from model import TokenLevelGFMClassifier, create_model
 from resource_monitor import ResourceMonitor
@@ -385,7 +385,14 @@ def main():
                         help="Genus model checkpoint (for topk/soft routing)")
     parser.add_argument("--skip_save_logits", action="store_true",
                         help="Save only preds+labels in predictions.npz (avoids OOM for large datasets)")
+    parser.add_argument("--test_fasta", type=str, default=None,
+                        help="Independent test FASTA (bypasses train/val split in config)")
+    parser.add_argument("--test_labels", type=str, default=None,
+                        help="Labels TSV for --test_fasta (required when --test_fasta is set)")
     args = parser.parse_args()
+
+    if args.test_fasta and not args.test_labels:
+        parser.error("--test_labels is required when --test_fasta is set")
 
     cfg = load_config(args.config)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -413,13 +420,17 @@ def main():
 
     # ===== Load data =====
     task = cfg["data"]["task"]
-    data = load_data(
-        cfg["data"]["fasta_path"],
-        cfg["data"]["labels_path"],
-        cfg["data"].get("val_ratio", 0.1),
-        cfg["data"].get("seed", 42),
-        task=task,
-    )
+    if args.test_fasta:
+        print(f"[Test mode] Using independent test set: {args.test_fasta}")
+        data = load_test_data(args.test_fasta, args.test_labels, task=task)
+    else:
+        data = load_data(
+            cfg["data"]["fasta_path"],
+            cfg["data"]["labels_path"],
+            cfg["data"].get("val_ratio", 0.1),
+            cfg["data"].get("seed", 42),
+            task=task,
+        )
 
     if task == "genus":
         val_labels = data["val_genus_labels"]

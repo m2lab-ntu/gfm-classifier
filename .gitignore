@@ -69,3 +69,4 @@ lightning_logs/
 
 # Local notes (uncomment if you want)
 # notes_local/
+small_predictions/vocab_13mer.txt

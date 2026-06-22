@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A MST114550
+#SBATCH -A MST114414
 #SBATCH -J nt_genus_258M
 #SBATCH -p 64gpus
 #SBATCH --nodes=8
@@ -7,7 +7,8 @@
 #SBATCH --gres=gpu:8
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=0
-#SBATCH -t 12:00:00
+#SBATCH -t 24:00:00
+#SBATCH --exclude=25a-hgpn125
 #SBATCH -o /work/ymj1123ntu/logs/nt_genus_258M-%j.out
 #SBATCH -e /work/ymj1123ntu/logs/nt_genus_258M-%j.err
 
@@ -48,13 +49,13 @@ echo "Nodes:    $SLURM_NNODES  ($(scontrol show hostnames $SLURM_JOB_NODELIST | 
 echo "Start:    $(date)"
 echo "================================================================"
 
-source ~/miniconda/etc/profile.d/conda.sh
+module load miniconda3/26.1.1
+source $(conda info --base)/etc/profile.d/conda.sh
 conda activate gfm
 
 export HF_HOME=/work/ymj1123ntu/.cache/huggingface
 export HUGGINGFACE_HUB_CACHE=/work/ymj1123ntu/.cache/huggingface
 export TRANSFORMERS_CACHE=/work/ymj1123ntu/.cache/huggingface
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export OMP_NUM_THREADS=8
 export PYTHONUNBUFFERED=1
 export NCCL_DEBUG=WARN
@@ -62,8 +63,8 @@ export NCCL_DEBUG=WARN
 cd ${SCRIPTS}
 
 # ── Determine master node ────────────────────────────────────────────────────
-MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -1)
-MASTER_PORT=29500
+export MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -1)
+export MASTER_PORT=29500
 
 echo "Master: ${MASTER_ADDR}:${MASTER_PORT}"
 echo "World size: $((SLURM_NNODES * 8)) (${SLURM_NNODES} nodes × 8 GPUs)"
@@ -86,18 +87,10 @@ else
 fi
 
 # ── Launch DDP training ──────────────────────────────────────────────────────
-srun torchrun \
-    --nproc_per_node=8 \
-    --nnodes=${SLURM_NNODES} \
-    --node_rank=${SLURM_NODEID} \
-    --master_addr=${MASTER_ADDR} \
-    --master_port=${MASTER_PORT} \
-    --rdzv_backend=c10d \
-    --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
-    train_ddp.py \
+srun python train_ddp.py \
         --config ${CONFIG} \
         ${RESUME_FLAG} \
-        --time_limit_sec 41400 \
+        --time_limit_sec 82800 \
     2>&1
 
 # ── Post-training report ─────────────────────────────────────────────────────

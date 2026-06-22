@@ -19,6 +19,7 @@ Key differences from train.py:
 """
 
 import argparse
+import datetime
 import gc
 import os
 import sys
@@ -45,10 +46,26 @@ from utils import load_config, save_config, save_json, AverageMeter, EarlyStoppi
 # ── DDP helpers ──────────────────────────────────────────────────────────────
 
 def setup_ddp():
-    dist.init_process_group("nccl")
-    local_rank = int(os.environ["LOCAL_RANK"])
+    # Support both srun-python (SLURM_*) and torchrun (LOCAL_RANK) launches
+    rank        = int(os.environ.get("SLURM_PROCID",   os.environ.get("RANK",        "0")))
+    world_size  = int(os.environ.get("SLURM_NTASKS",   os.environ.get("WORLD_SIZE",  "1")))
+    slurm_local = int(os.environ.get("SLURM_LOCALID",  os.environ.get("LOCAL_RANK",  "0")))
+    os.environ["RANK"]       = str(rank)
+    os.environ["WORLD_SIZE"] = str(world_size)
+    # If Slurm assigns 1 GPU per task, CUDA_VISIBLE_DEVICES is a single device
+    # (e.g. "3") → cuda:0 is the only visible device; otherwise use SLURM_LOCALID.
+    cvd = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+    if cvd and "," not in cvd and cvd not in ("-1", "NoDevFiles", ""):
+        local_rank = 0  # exactly 1 GPU assigned to this task
+    else:
+        local_rank = slurm_local
     torch.cuda.set_device(local_rank)
-    return local_rank, dist.get_rank(), dist.get_world_size()
+    dist.init_process_group(
+        "nccl",
+        device_id=torch.device(f"cuda:{local_rank}"),
+        timeout=datetime.timedelta(hours=4),
+    )
+    return local_rank, rank, world_size
 
 
 def cleanup_ddp():
@@ -174,6 +191,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config",  type=str, required=True)
     parser.add_argument("--resume",  type=str, default=None)
+    parser.add_argument("--init_from", type=str, default=None)
     parser.add_argument("--time_limit_sec", type=int, default=None)
     args = parser.parse_args()
 
@@ -199,7 +217,7 @@ def main():
         output_dir.mkdir(parents=True, exist_ok=True)
         save_config(cfg, str(output_dir))
 
-    dist.barrier()
+    dist.barrier(device_ids=[local_rank])
 
     # ── Resource monitor (rank 0 only) ────────────────────────────────────────
     monitor = None
@@ -275,8 +293,7 @@ def main():
         val_dataset,
         batch_size=train_cfg.get("eval_batch_size", batch_size * 2),
         sampler=val_sampler,
-        num_workers=num_workers, pin_memory=True,
-        persistent_workers=(num_workers > 0),
+        num_workers=0, pin_memory=True,
     )
 
     # ── Model ─────────────────────────────────────────────────────────────────
@@ -301,6 +318,22 @@ def main():
         resume_epoch = ckpt.get("epoch", 0)
         if is_main:
             print(f"  Loaded from epoch {resume_epoch}  val_acc={ckpt.get('val_acc','N/A')}")
+    elif args.init_from:
+        if is_main:
+            print(f"\n--- Warm start from: {args.init_from} (epoch resets to 0) ---")
+        ckpt = torch.load(args.init_from, map_location=device, weights_only=False)
+        _sd = ckpt["model_state_dict"]
+        _remapped = {}
+        for _k, _v in _sd.items():
+            _parts = _k.split(".")
+            if len(_parts) >= 2 and _parts[-1] in ("weight", "bias") and _parts[-2] in ("query","key","value"):
+                _remapped[".".join(_parts[:-1]) + ".base_layer." + _parts[-1]] = _v
+            else:
+                _remapped[_k] = _v
+        model.load_state_dict(_remapped, strict=False)
+        resume_epoch = 0
+        if is_main:
+            print(f"  Warm-start weights loaded  val_acc={ckpt.get('val_acc','N/A')}")
     else:
         resume_epoch = 0
 
