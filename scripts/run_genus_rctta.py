@@ -98,8 +98,9 @@ def main():
     print(f"\nforward-only : {acc_fwd*100:.2f}%")
     print(f"rc-only      : {acc_rc*100:.2f}%")
     print(f"RC-TTA (avg) : {acc_tta*100:.2f}%   (delta vs fwd: {(acc_tta-acc_fwd)*100:+.2f} pp)")
+    preds = (p_fwd + p_rc).argmax(1).astype(np.int64)   # RC-TTA per-read prediction (for sample-level eval)
     np.savez_compressed(os.path.join(args.out_dir, "rctta.npz"),
-                        labels=labels, acc_fwd=acc_fwd, acc_rc=acc_rc, acc_tta=acc_tta)
+                        preds=preds, labels=labels, acc_fwd=acc_fwd, acc_rc=acc_rc, acc_tta=acc_tta)
 
 if __name__ == "__main__":
     main()
