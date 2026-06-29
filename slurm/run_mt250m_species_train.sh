@@ -2,7 +2,7 @@
 #SBATCH -A MST114550
 #SBATCH -J mt250m_species
 #SBATCH -p 8gpus
-#SBATCH --nodes=1 --ntasks-per-node=1 --gres=gpu:1 --cpus-per-task=16 --mem=128G
+#SBATCH --nodes=1 --ntasks-per-node=1 --gres=gpu:1 --cpus-per-task=12 --mem=128G
 #SBATCH -t 2-00:00:00 --requeue
 #SBATCH -o /work/ymj1123ntu/logs/mt250m_species-%j.out
 #SBATCH -e /work/ymj1123ntu/logs/mt250m_species-%j.err
