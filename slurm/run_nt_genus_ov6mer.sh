@@ -2,7 +2,8 @@
 #SBATCH -A MST114414
 #SBATCH -J nt_ov6mer
 #SBATCH -p 8gpus
-#SBATCH --nodes=1 --ntasks-per-node=4 --gres=gpu:4 --cpus-per-task=8 --mem=0
+#SBATCH --nodes=1 --ntasks-per-node=8 --gres=gpu:8 --cpus-per-task=8 --mem=0
+#SBATCH --requeue
 #SBATCH -t 2-00:00:00
 #SBATCH -o /work/ymj1123ntu/logs/nt_ov6mer-%j.out
 #SBATCH -e /work/ymj1123ntu/logs/nt_ov6mer-%j.err
