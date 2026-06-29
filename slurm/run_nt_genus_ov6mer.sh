@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A MST114414
+#SBATCH -A MST114550
 #SBATCH -J nt_ov6mer
 #SBATCH -p 8gpus
 #SBATCH --nodes=1 --ntasks-per-node=8 --gres=gpu:8 --cpus-per-task=8 --mem=0
