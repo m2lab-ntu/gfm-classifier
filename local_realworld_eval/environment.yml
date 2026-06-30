@@ -1,0 +1,28 @@
+# Local env for real-world / generalization INFERENCE on a 4090 (no training deps).
+# Recreate the Nano4 'gfm' env's inference-relevant pins. CUDA 12.1 wheels.
+#   conda env create -f environment.yml && conda activate gfm-local
+name: gfm-local
+channels: [conda-forge, bioconda, pytorch, nvidia]
+dependencies:
+  - python=3.11
+  - pip
+  # read simulation + genome download (Track A data prep, CPU)
+  - art            # provides art_illumina
+  - ncbi-datasets-cli
+  - pip:
+      - torch==2.5.1            # cu121 build: pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121
+      - transformers==4.46.3
+      - tokenizers==0.20.3
+      - peft==0.19.1
+      - omegaconf==2.3.0
+      - accelerate==1.13.0
+      - einops==0.8.2
+      - numpy
+      - pandas
+      - scipy
+      - matplotlib
+# Notes:
+# - For the cu121 torch wheel use the index-url above (the bare pip line may grab a CPU build).
+# - MetaTransformer inference needs its src on PYTHONPATH (transfer MetaTransformer/src/).
+# - Inference does NOT need tensorboard / the trainer; the metric_utils pandas patch is
+#   training-only and irrelevant here.
