@@ -46,12 +46,43 @@ config → the species one, adjust account/partition).
 but note Taiwania-2's own HGR data is 2505sp, NOT the 1535sp used here, so the 1535sp source
 must come from Nano4 either way.)*
 
+## Job 3 — DNABERT-2 @50M clean finish (MEDIUM value; cheap transfer)
+Another tokenizer data point: DNABERT-2 uses **BPE** (variable-length, ~4k vocab, not a
+long near-unique-k-mer key) → expected to cap *below* NT-v2 6-mer, strengthening the
+tokenization story. On Nano4 it reached **ep17, val_acc ~59.2% and plateauing** but never
+finished cleanly.
+
+**Root cause it "looped on Epoch 18" (already diagnosed — NOT a code bug):** Nano4's 4h
+per-job walltime ≈ one epoch (~3.3h) + 50M-read load, a checkpoint-persistence **race** —
+a job finished an epoch but was killed before writing `last.pt`, so the next job re-ran it.
+Verified the epoch bookkeeping is correct (`last.pt.epoch` == completed-epoch count; resume
+advances properly; `history` is reloaded on resume). **Fix is operational: run one long job.**
+
+**Run:** `sbatch slurm/run_dnabert2_genus_50M.twcc.sh` — a **single 2-day job**, no resume
+chain, resumes from the existing `last.pt` @ep17. Set `-A`/`-p`/`-t` to Taiwania-2 values.
+Expect early-stop ~ep22-25, val ~60%. Then eval on `clean_common` like the other settings.
+
+**Transfer from Nano4 (~13 GB):**
+| file | Nano4 path | size |
+|---|---|---|
+| resume checkpoint | `checkpoints/dnabert2_token_genus_50M/{last.pt, best.pt}` | 0.5 GB ×2 |
+| 50M data | `data/reads_50M.fa` + `data/labels_50M.tsv` | 9.0 + 3.7 GB |
+
+*(The 50M data is shared with NT-v2 50M runs — Taiwania-2 may already have it from the
+original thesis training; transfer only if absent.)*
+
 ## Already done (do NOT re-run)
 7 genus settings (v9/v14/v15/gbal/sbal/MT-50M/MT-250M) + MT 6-mer s1/s6 @250M + MT species
 @250M (val ~0.84, qualitative). Numbers in `THESIS_NUMBERS.md` (this repo's
 `local_realworld_eval/` + `benchmark_results/` on Nano4).
 
 ## Priority call
-Job 1 (ov6mer) is cheap (~7 GB) and nearly done → finish it. Job 2 (NT-v2 species @250M) is a
-67 GB transfer for an expected-saturate result → **only if you want the symmetric species number**;
-otherwise skip. The high-value next step is the **local real-world eval**, not more HPC training.
+- **Job 1 (ov6mer)** — cheap (~7 GB), nearly done → finish it.
+- **Job 3 (DNABERT-2 @50M)** — cheap (~13 GB), one clean long job → worth it for the extra
+  BPE-tokenizer data point (expected ~60%, below NT-v2 6-mer).
+- **Job 2 (NT-v2 species @250M)** — 67 GB transfer for an expected-saturate result → **only if
+  you want the symmetric species number**; otherwise skip.
+
+The high-value next step remains the **local real-world eval** (`local_realworld_eval/`), not more
+HPC training. All three jobs above are confirmatory — they sharpen the tokenization table but
+don't change the locked main conclusions.
