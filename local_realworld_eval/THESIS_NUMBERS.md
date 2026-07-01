@@ -26,7 +26,7 @@ clean_common = Taiwania2 100K val, 99,742 reads, disjoint from 50M∪250M. Repor
 | 6-mer overlap (s1) | MT | ✅ 48.87% (thesis) | ✅ 50.6% |
 | 6-mer non-overlap (s6) | MT | ✅ 47.00% (thesis) | ✅ 45.0% |
 | 6-mer non-overlap | NT-v2 (pretrained) | ✅ 67.07% | ✅ 67.3% (saturates) |
-| 6-mer overlap | NT-v2 (pretrained) | — | 🔄 ~51% @ ep3, rising (dev chain 159936+; ~86 min/ep, not converged) |
+| 6-mer overlap | NT-v2 (pretrained) | — | ✅ 62.2% @ ep15 (not fully converged; < non-overlap 67% → overlap is OOD for the non-overlap-pretrained model) |
 **Takeaway:** 6-mer caps 45–67% (NT-v2 67% = best, via pretraining); only 13-mer reaches 87→98.7%. Tokenization governs both **ceiling** and **scalability**.
 
 ## 3. Train-fit ceiling (strongest tokenization evidence) ✅
