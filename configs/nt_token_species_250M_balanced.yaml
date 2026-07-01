@@ -1,0 +1,63 @@
+# ============================================================
+# NT-v2 + LoRA SPECIES (1535 classes) on 250M balanced — does NT-v2 6-mer species also saturate?
+# ============================================================
+# NT-v2 + LoRA SPECIES (1535 classes) on 250M balanced — does NT-v2 6-mer species also saturate?
+#      1,535-species source (labeled_multi_level_1535sp), NOT the
+#      wrong HPC 3,507-species data that v10/v12/v13 accidentally
+#      used. Fixes BOTH compounding bugs:
+#        (1) correct dataset (1535sp, uploaded 6/17)
+#        (2) single-line FASTA (subsample normalised wrapped seqs)
+#            → avoids the _read_seq one-line-truncation bug.
+#      Recreates v9's balanced recipe (class_weights=false, scratch)
+#      at 5× scale to isolate the "balance" variable.
+#      Data: 250M reads, 1535 species, ~162,866 reads/species.
+# ============================================================
+
+# ===== Model =====
+model:
+  backbone: "InstaDeepAI/nucleotide-transformer-v2-500m-multi-species"
+  head_type: "attention_pool"
+  head_config:
+    hidden_dim: 512
+    num_attention_heads: 4
+    dropout: 0.15
+  freeze_backbone: false
+  use_lora: true
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  lora_target_modules: ["query", "key", "value"]
+  gradient_checkpointing: true
+  trust_remote_code: true
+
+# ===== Data =====
+data:
+  fasta_path: "/work/ymj1123ntu/data/balanced_250M/reads_250M.fa"
+  labels_path: "/work/ymj1123ntu/data/balanced_250M/labels_250M.tsv"
+  val_ratio: 0.02
+  seed: 42
+  max_token_length: 32
+  task: "species"
+  rc_augment: true
+
+# ===== Training =====
+training:
+  batch_size: 128           # per-GPU  (128 × 64 GPUs = 8192 effective batch)
+  eval_batch_size: 512
+  gradient_accumulation_steps: 1
+  num_epochs: 25            # from scratch on balanced data
+  learning_rate: 3.0e-4
+  backbone_lr: 2.0e-5
+  weight_decay: 0.02
+  warmup_ratio: 0.03
+  amp: true
+  max_grad_norm: 5.0
+  early_stopping_patience: 5
+  num_workers: 8
+  label_smoothing: 0.0
+  class_weights: false      # balanced data → no weighting (v9 recipe)
+  logit_adjustment: false
+
+# ===== Output =====
+output:
+  dir: "/work/ymj1123ntu/checkpoints/nt_token_species_250M_balanced"

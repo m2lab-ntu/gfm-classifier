@@ -1,0 +1,57 @@
+# Taiwania-2 Continuation — Agent Handoff
+
+**Why.** Nano4 free credits are exhausted (new submissions blocked). Remaining GPU
+training moves to Taiwania-2 (TWCC). This repo (`git pull`) already carries the configs +
+scripts + slurms; only the **1535sp data + one checkpoint** must be transferred from Nano4.
+
+> Real-world / new-genome evaluation does **NOT** belong here — that's local-4090 (see
+> `local_realworld_eval/`). This folder is only for the remaining **HPC training**.
+
+## Adapt to Taiwania-2
+The slurms in `slurm/` use Nano4's account/partition (`-A MST114550`, `-p 8gpus`/`dev`,
+`--gres=gpu:8`). **Change `-A`, `-p`, node/gpu counts, and `--cpus-per-task` to Taiwania-2's**
+(the Taiwania-2 agent knows the valid values). Paths assume `/work/ymj1123ntu/…`; keep or
+remap consistently.
+
+---
+
+## Job 1 — ov6mer full convergence (LOW value / confirmatory; cheap)
+NT-v2 + overlapping-6mer. On Nano4 it reached **ep15, val 61.3% and still rising** but is
+tracking *below* non-overlap (v9 was 64.3% at ep14) → expected to plateau **≤67%** (confirms
+the 6-mer ceiling; overlap doesn't rescue it). Finish it only if you want the converged number.
+
+**Transfer from Nano4 (~7 GB):**
+| file | Nano4 path | size |
+|---|---|---|
+| resume checkpoint | `checkpoints/nt_token_genus_ov6mer_17M/last.pt` | 2.0 GB |
+| 17.6M data | `data/balanced_species_17M/{reads.fa, labels.tsv, reads.idx.npy}` | 4.7 GB + 0.28 GB idx |
+
+**Run:** `sbatch slurm/run_nt_genus_ov6mer.sh` (config `configs/nt_token_genus_ov6mer_17M.yaml`;
+auto-resumes from `last.pt` if present). Remove the Nano4 `-p 16gpus`/`--requeue` lines as needed.
+
+## Job 2 — NT-v2 species @250M (MEDIUM value; HEAVY transfer)
+Does the NT-v2 6-mer *species* task also saturate at 250M? (Expected yes, mirroring genus.)
+Config ready: **`configs/nt_token_species_250M_balanced.yaml`** (task=species, 1535 classes,
+`data/balanced_250M`). Prebuild the index first (see `slurm/run_prebuild_index_250M.sh` pattern),
+then multi-GPU DDP like v14/v15 (`slurm/run_nt_genus_v14_250M_ddp_nano4.sh` as a template — swap
+config → the species one, adjust account/partition).
+
+**Transfer from Nano4 (~67 GB — heavy):**
+| file | Nano4 path | size |
+|---|---|---|
+| 250M data | `data/balanced_250M/{reads_250M.fa, labels_250M.tsv, reads_250M.idx.npy}` | 67 GB |
+
+*(Alternatively, Taiwania-2 can re-subsample 250M from the 1535sp source
+`data/labeled_multi_level_1535sp/reads.fa` (47 GB) via `slurm/run_subsample_250M_balanced.sh` —
+but note Taiwania-2's own HGR data is 2505sp, NOT the 1535sp used here, so the 1535sp source
+must come from Nano4 either way.)*
+
+## Already done (do NOT re-run)
+7 genus settings (v9/v14/v15/gbal/sbal/MT-50M/MT-250M) + MT 6-mer s1/s6 @250M + MT species
+@250M (val ~0.84, qualitative). Numbers in `THESIS_NUMBERS.md` (this repo's
+`local_realworld_eval/` + `benchmark_results/` on Nano4).
+
+## Priority call
+Job 1 (ov6mer) is cheap (~7 GB) and nearly done → finish it. Job 2 (NT-v2 species @250M) is a
+67 GB transfer for an expected-saturate result → **only if you want the symmetric species number**;
+otherwise skip. The high-value next step is the **local real-world eval**, not more HPC training.
