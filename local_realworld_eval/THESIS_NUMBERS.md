@@ -77,6 +77,20 @@ MT 13-mer "~5M params" is misleading: **embedding alone = 2.1B** (33.5M-row 13-m
 - **MT 6-mer leftover-pool Top-1** (strict pool): s1 39.1%, s6 33.0% (vs clean_common 50.6/45.0) — 6-mer low everywhere. Sample-level r (friendly/leftover): s1 0.989/0.849, s6 0.988/0.825.
 - **MT SPECIES @250M** (1535sp): trained, **val precision ~0.84 / recall ~0.62** (own val) → high fit, same direction as genus scaling. ⚠️ Report as **qualitative only**: clean_common species Top-1 is broken (0.01%, species label-index mismatch), and thesis's 50M species (49.62%) is 2505sp → no clean comparable baseline. (User decision 2026-06-30.)
 
+## 11. Why MT 13-mer = 98.7%? — NOT lookup (2026-07-01) ✅
+k-mer classifiers, no neural net, same clean_common test + 50M-read reference:
+| method | genus Top-1 |
+|---|---|
+| unique-key lookup (Kraken-style) | 0.72% |
+| dominant-genus mode vote | 35.3% |
+| **multinomial k-mer Naive Bayes** (full P(kmer\|genus)) | **74.9%** |
+| **MT 13-mer neural @50M** | 87.5% |
+| NT-v2 6-mer (498M pretrained) | 67% |
+- **k=13 has NO unique keys**: 4^13=67.1M space is saturated by the 1,535 genomes (67.0M distinct seen); test 13-mers 100% known but only 0.4% genus-unique. Kraken uses k=31 (near-unique); k=13 is not. → MT is **not** exact-match lookup.
+- Composition signal is strong (NB 74.9%); MT's neural net adds **+13pp** over NB (captures co-occurrence beyond NB independence).
+- **★ tokenization > model**: dumb 13-mer NB (74.9%) **beats** 498M pretrained NT-v2 6-mer (67%). Representation (k-length) more decisive than capacity/pretraining.
+- **Corrects earlier "near-lookup" framing** (now retracted): the mechanism is learned high-dim composition, not lookup. Closed-set caveat still holds; novel-genome generalization untested. Full write-up + thesis paragraph: `gfm-classifier/docs/kmer_lookup_analysis.md`.
+
 ## ⏳ Pending / in progress
 - **NT-v2 overlap-6mer**: running on dev resume-chain (159936→939→eval 159940); ~51% @ ep3 and rising, ~86 min/ep so converges slowly. Fills §2 4th cell. Expectation: ≤67% (OOD overlap input on a 6-mer-pretrained model; still 6-mer).
 
