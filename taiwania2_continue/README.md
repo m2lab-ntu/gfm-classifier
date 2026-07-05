@@ -15,6 +15,24 @@ remap consistently.
 
 ---
 
+## 傳輸檔案(從 Nano4 執行)
+⚠️ **本 repo 未記錄 Taiwania-2 登入位址**(Nano4 known_hosts 只有 `nano5.nchc.org.tw`)。
+把 `<T2_HOST>` 換成你的 Taiwania-2 登入節點、`<T2_PATH>` 換成目標根目錄(下方假設沿用 `/work/ymj1123ntu`)。
+
+```bash
+# Job 1 (ov6mer) — 約 7GB:checkpoint + 17M 資料
+rsync -avhP /work/ymj1123ntu/checkpoints/nt_token_genus_ov6mer_17M/last.pt \
+      <T2_HOST>:<T2_PATH>/checkpoints/nt_token_genus_ov6mer_17M/
+rsync -avhP /work/ymj1123ntu/data/balanced_species_17M/ \
+      <T2_HOST>:<T2_PATH>/data/balanced_species_17M/
+```
+**若 Nano4 ↔ Taiwania-2 無法直接 SSH**(歷史上常見:Taiwania-2 未 mount TWCC/Nano4 的 /work):
+先 `rsync` 到本機,再從本機上傳到 Taiwania-2(兩段 rsync)。
+
+傳完後,依下方 Job 對應的 slurm(改 `-A`/`-p` 為 Taiwania-2 值)提交。
+
+---
+
 ## Job 1 — ov6mer full convergence (LOW value / confirmatory; cheap)
 NT-v2 + overlapping-6mer. On Nano4 it reached **ep15, val 61.3% and still rising** but is
 tracking *below* non-overlap (v9 was 64.3% at ep14) → expected to plateau **≤67%** (confirms
