@@ -86,6 +86,17 @@ k-mer classifiers, no neural net, same clean_common test + 50M-read reference:
 | **multinomial k-mer Naive Bayes** (full P(kmer\|genus)) | **74.9%** |
 | **MT 13-mer neural @50M** | 87.5% |
 | NT-v2 6-mer (498M pretrained) | 67% |
+
+**6-mer control (fair, same method/reference/test) — isolates k as the only variable:**
+| non-neural method | 6-mer s1 | 6-mer s6 (=NT-v2) | 13-mer |
+|---|---|---|---|
+| unique-key | 0.00% | 0.00% | 0.72% |
+| mode vote | 30.7% | 30.7% | 35.3% |
+| **Naive Bayes** | **25.7%** | **25.9%** | **74.9%** |
+| neural | — | NT-v2 67% | MT 87.5% |
+- Same NB method: 13-mer (74.9%) ≈ 3× 6-mer (25.9%) → k-length is the decisive variable, not the model.
+- Neural adds more on the weaker tokenizer: 6-mer +41pp (26→67), 13-mer +13pp (75→87.5).
+- 498M pretrained NT-v2 on 6-mer (67%) still < dumb NB on 13-mer (74.9%): no amount of modeling on 6-mer catches trivial modeling on 13-mer.
 - **k=13 has NO unique keys**: 4^13=67.1M space is saturated by the 1,535 genomes (67.0M distinct seen); test 13-mers 100% known but only 0.4% genus-unique. Kraken uses k=31 (near-unique); k=13 is not. → MT is **not** exact-match lookup.
 - Composition signal is strong (NB 74.9%); MT's neural net adds **+13pp** over NB (captures co-occurrence beyond NB independence).
 - **★ tokenization > model**: dumb 13-mer NB (74.9%) **beats** 498M pretrained NT-v2 6-mer (67%). Representation (k-length) more decisive than capacity/pretraining.
