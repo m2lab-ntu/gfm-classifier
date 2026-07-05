@@ -16,8 +16,8 @@ remap consistently.
 ---
 
 ## 傳輸檔案(從 Nano4 執行)
-⚠️ **本 repo 未記錄 Taiwania-2 登入位址**(Nano4 known_hosts 只有 `nano5.nchc.org.tw`)。
-把 `<T2_HOST>` 換成你的 Taiwania-2 登入節點、`<T2_PATH>` 換成目標根目錄(下方假設沿用 `/work/ymj1123ntu`)。
+`<T2_HOST>` = 你本機 `~/.ssh/config` 的 `Taiwania2` alias 展開後的 `ymj1123ntu@<IP>`(從 Nano4 跑要用完整 `user@IP`,Nano4 無此 alias)。**登入 IP 不寫進 repo**,見本機 ssh config 或指令記錄。
+已驗證:Nano4 可直接連到 Taiwania-2 的 22 埠 → 可直接 rsync,不需經本機中轉。
 
 ```bash
 # Job 1 (ov6mer) — 約 7GB:checkpoint + 17M 資料
@@ -26,10 +26,8 @@ rsync -avhP /work/ymj1123ntu/checkpoints/nt_token_genus_ov6mer_17M/last.pt \
 rsync -avhP /work/ymj1123ntu/data/balanced_species_17M/ \
       <T2_HOST>:<T2_PATH>/data/balanced_species_17M/
 ```
-**若 Nano4 ↔ Taiwania-2 無法直接 SSH**(歷史上常見:Taiwania-2 未 mount TWCC/Nano4 的 /work):
-先 `rsync` 到本機,再從本機上傳到 Taiwania-2(兩段 rsync)。
-
-傳完後,依下方 Job 對應的 slurm(改 `-A`/`-p` 為 Taiwania-2 值)提交。
+（`<T2_PATH>` = Taiwania-2 上的目標根目錄,預設沿用 `/work/ymj1123ntu`,請確認實際路徑。）
+傳完後依下方 Job 對應的 slurm(改 `-A`/`-p` 為 Taiwania-2 值)提交。
 
 ---
 
