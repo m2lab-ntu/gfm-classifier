@@ -1,0 +1,15 @@
+{
+  "n_total": 100000,
+  "bracken_reads_assigned": 88968.0,
+  "bracken_reads_unmapped_to_genus": 0.0,
+  "genus": {
+    "kraken2_raw": {
+      "pearson_r": 0.8448797555944412,
+      "bray_curtis": 0.17671901652843952
+    },
+    "kraken2_bracken": {
+      "pearson_r": 0.9974371165117795,
+      "bray_curtis": 0.06014774988357818
+    }
+  }
+}
