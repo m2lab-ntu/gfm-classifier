@@ -1,0 +1,10 @@
+{
+  "exp_name": "Kraken2+Bracken (mock)",
+  "n_in_set_genera": 11,
+  "out_of_set_expected_fraction": 18.51,
+  "pearson_r_in_set": 0.5796847989859609,
+  "bray_curtis_in_set": 0.4367367914631497,
+  "detect_threshold": 0.01,
+  "detection_sensitivity_in_set": 0.5454545454545454,
+  "false_positive_genera": 4
+}
