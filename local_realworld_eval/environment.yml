@@ -10,7 +10,8 @@ dependencies:
   - art            # provides art_illumina
   - ncbi-datasets-cli
   - pip:
-      - torch==2.5.1            # cu121 build: pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121
+      - --extra-index-url https://download.pytorch.org/whl/cu121
+      - torch==2.5.1+cu121
       - transformers==4.46.3
       - tokenizers==0.20.3
       - peft==0.19.1

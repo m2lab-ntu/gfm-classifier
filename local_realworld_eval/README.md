@@ -60,10 +60,14 @@ NT-v2 configs are in this repo (`configs/nt_token_genus_*.yaml`). Inference scri
 ## 4. Track A — New-genome generalization (DO THIS FIRST; most feasible & informative)
 Goal: reads from **different genomes of the same 120 genera** → tests generalization, not memory.
 
+The completed results and their limitations are documented in
+[`TRACK_A_RESULTS.md`](TRACK_A_RESULTS.md).
+
 1. **Pick genera & download new genomes.** From the genus label map, for each of the 120 genera
    download 1–3 genomes from NCBI/GTDB that are **NOT among the 1,535 training genomes**
-   (different accessions/strains). `datasets download genome taxon "<genus>" --assembly-level complete`.
-   De-dup against training accessions if available.
+   (different accessions/strains). The pipeline passes
+   `track_a_training_gcf_accessions.txt` to the downloader and fails if an excluded
+   accession is already present. Do not bypass this audit.
 2. **Build labeled FASTA.** Assign each genome its training **genus_class** (map by genus name →
    the index in the label map). Header format the pipeline expects:
    `>lbl|<species_class>|<species_name>|<genus_class>|<genus_name>-<readid>` (species_class can be
@@ -121,4 +125,6 @@ PYTHONPATH=<MetaTransformer>/src python scripts/extract_mt_predictions.py \
 Top-1 (and sample-level r) on NEW genomes for each setting, side-by-side with the closed-set
 numbers. The **drop from closed-set → new-genome** is the headline: it quantifies how much each
 model *memorized* vs *generalized*, and whether the tokenization advantage (13-mer) survives on
-unseen genomes.
+unseen genomes. Treat this as a robustness analysis rather than a clean tokenization ablation:
+the evaluated models also differ in model size and training volume. Do not report the
+sample-level abundance correlation from the uniformly sampled Track A pool.
