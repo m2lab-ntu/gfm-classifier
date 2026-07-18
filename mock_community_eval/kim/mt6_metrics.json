@@ -1,0 +1,10 @@
+{
+  "exp_name": "Kim MT6",
+  "n_in_set_genera": 16,
+  "out_of_set_expected_fraction": 3.2112,
+  "pearson_r_in_set": 0.5263174887662093,
+  "bray_curtis_in_set": 0.3699667091820398,
+  "detect_threshold": 0.01,
+  "detection_sensitivity_in_set": 0.875,
+  "false_positive_genera": 5
+}

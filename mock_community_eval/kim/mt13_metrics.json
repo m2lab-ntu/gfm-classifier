@@ -1,0 +1,10 @@
+{
+  "exp_name": "Kim MT13",
+  "n_in_set_genera": 16,
+  "out_of_set_expected_fraction": 3.2112,
+  "pearson_r_in_set": 0.3465171474410845,
+  "bray_curtis_in_set": 0.3598705581673874,
+  "detect_threshold": 0.01,
+  "detection_sensitivity_in_set": 0.75,
+  "false_positive_genera": 4
+}

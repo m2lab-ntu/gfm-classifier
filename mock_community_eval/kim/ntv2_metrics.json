@@ -1,0 +1,10 @@
+{
+  "exp_name": "Kim NTv2",
+  "n_in_set_genera": 16,
+  "out_of_set_expected_fraction": 3.2112,
+  "pearson_r_in_set": 0.4577424672023869,
+  "bray_curtis_in_set": 0.3083379165908468,
+  "detect_threshold": 0.01,
+  "detection_sensitivity_in_set": 0.875,
+  "false_positive_genera": 6
+}

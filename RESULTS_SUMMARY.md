@@ -37,10 +37,12 @@ SRR33710519, 3M reads (~135 bp). In-set = 11/17 genera (81.5% of DNA); 18.5% out
 | NT-v2 + LoRA | 6-mer | **0.420** | 0.376 | 72.7% | 7 |
 | MT 6-mer 50M | 6-mer | **0.065** | 0.409 | 72.7% | 10 |
 
-Note: detection sensitivity is coarse here (all hit the same 8/11 → 72.7%, incl. a false
-Clostridium spike). Pearson r / Bray-Curtis are the discriminating metrics. MT 6-mer
-collapses (r=0.065): from-scratch 6-mer embedding fails on real error profiles; NT-v2's
-pretrained-backbone 6-mer (0.420) rescues it — a tokenization × pretraining finding.
+Note: detection sensitivity is coarse here (all hit the same 8/11 → 72.7%). ⚠️ The MT 6-mer
+r=0.065 is LARGELY A METRIC ARTEFACT — D6331's in-set includes Clostridium (trace, 0.0001%),
+and all three models dump ~20–30% of reads into Clostridium (a shared false attractor); on
+D6331 that spike lands *inside* the in-set correlation and tanks r. On the Kim mock (§E),
+where Clostridium is NOT in the composition, the same spike becomes a false positive and MT
+6-mer's r is normal (0.526). **Do not use D6331's 6-mer collapse as evidence that 13-mer > 6-mer.**
 
 ## D. Kraken2 / Bracken baselines (100K balanced_50M test)
 
@@ -48,14 +50,27 @@ pretrained-backbone 6-mer (0.420) rescues it — a tokenization × pretraining f
 - Genus abundance: raw Kraken2 r=**0.845** (BC 0.177) → **Kraken2+Bracken r=0.997** (BC 0.060)
   (Bracken redistributes the 19,508 reads Kraken2 strands at the flat-taxonomy root.)
 
-## E. Kim gut mock (DDBJ PRJDB10817, DRR466867) — IN PROGRESS
+## E. Kim gut mock (DDBJ PRJDB10817, DRR466867) — real, high-overlap
 
-Higher-overlap real gut mock: **16/18 genera in-set (96.8% of DNA)**, only Methanobrevibacter
-(archaeon) out-of-set — vs D6331's 11/17. 16 correlation points (not 11), even-ish
-composition covering Faecalibacterium/Roseburia/Prevotella/Akkermansia/Blautia/Ruminococcus…
-3M reads truncated to 150 bp. Running MT 13-mer / MT 6-mer / NT-v2; abundance eval pending.
+**16/18 genera in-set (96.8% of DNA)**, only Methanobrevibacter (archaeon) out — vs D6331's
+11/17. 16 correlation points, cell-even composition (read-expected ∝ genome length).
+3M reads @150 bp (MT 13-mer on 1.5M due to RAM).
+
+| Model | Tokenization | Pearson r | Bray-Curtis | detection @≥1% | FP genera |
+|---|---|---|---|---|---|
+| MT 6-mer 50M | 6-mer | **0.526** | 0.370 | 87.5% (14/16) | 5 |
+| NT-v2 + LoRA | 6-mer | **0.458** | **0.308** | 87.5% (14/16) | 6 |
+| MT 13-mer 250M | 13-mer | **0.347** | 0.360 | 75.0% (12/16) | 4 |
+
+**Ranking FLIPS vs D6331** (there MT13>NT>MT6; here MT6>NT>MT13) → on real gut abundance the
+three are **comparable and all mediocre (r 0.35–0.53)**; tokenization does not cleanly separate
+them. Shared failure modes on both mocks: (a) ~20–30% of reads dumped into a false **Clostridium**
+attractor, (b) severe under-prediction of dominant genera (Parabacteroides, Anaerostipes,
+Akkermansia, Roseburia, Eubacterium, Faecalibacterium). The dramatic D6331 6-mer collapse was
+a metric artefact (see §C). Deliverables: `mock_community_eval/kim/`.
 
 ## Pending
-- Kim mock 3-model abundance eval
 - Soil MT-5M / MT-50M (Taiwania2), soil NT-v2 5M (Taiwania2 handoff)
-- CAMI2 human-gut (not started)
+- CAMI2 human-gut — assessed as LOW marginal value (simulated; low in-set coverage vs 120 genera);
+  skip unless a reviewer asks. A 3rd *real* mock (NIBSC/Tourlousse) would be better if more
+  robustness is wanted.
