@@ -1,0 +1,9 @@
+name: classification_transformer
+embed_dim: 128
+num_att_heads: 2
+dim_ff: 512
+num_encoder_blocks: 1
+dropout: 0.1
+use_pad_mask: true
+activation: relu
+aggregation_mode: mean

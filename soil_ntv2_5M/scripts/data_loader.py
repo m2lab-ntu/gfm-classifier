@@ -66,10 +66,13 @@ def load_data(
     print(f"  Labels TSV columns: {list(labels_df.columns)}")
     print(f"  Total rows in TSV: {len(labels_df):,}")
 
-    # Build seq_id → row mapping
-    seq_id_to_row = {}
-    for i, row in labels_df.iterrows():
-        seq_id_to_row[row["seq_id"]] = row
+    # Build seq_id -> row-index mapping (vectorized; iterrows + dict-of-Series was
+    # O(N) Python and stored 50M pandas Series -> ~tens of GB / ~1h at 50M scale).
+    # Same result, but seconds and light memory.
+    seq_id_arr = labels_df["seq_id"].to_numpy()
+    genus_arr = labels_df["genus_name"].to_numpy()
+    species_arr = labels_df["species_name"].to_numpy()
+    seq_id_to_idx = {sid: i for i, sid in enumerate(seq_id_arr)}
 
     # ---- Read FASTA and match labels ----
     fasta_ids, fasta_seqs = load_fasta(fasta_path)
@@ -78,11 +81,11 @@ def load_data(
     # Match in FASTA order (preserves ordering for reproducibility)
     sequences, genus_names_list, species_names_list = [], [], []
     for sid, seq in zip(fasta_ids, fasta_seqs):
-        if sid in seq_id_to_row:
-            row = seq_id_to_row[sid]
+        j = seq_id_to_idx.get(sid)
+        if j is not None:
             sequences.append(seq)
-            genus_names_list.append(row["genus_name"])
-            species_names_list.append(row["species_name"])
+            genus_names_list.append(genus_arr[j])
+            species_names_list.append(species_arr[j])
 
     sequences = np.array(sequences)
     print(f"  Matched sequences: {len(sequences):,}")

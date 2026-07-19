@@ -1,0 +1,91 @@
+diff --git a/src/trainer/AbstractTrainer.py b/src/trainer/AbstractTrainer.py
+index b7cc8e4..95dbe59 100644
+--- a/src/trainer/AbstractTrainer.py
++++ b/src/trainer/AbstractTrainer.py
+@@ -5,6 +5,7 @@ from logging import getLogger
+ from sys import float_info
+ import os
+ from typing import Callable, Dict, List, Union
++from omegaconf import OmegaConf
+ from omegaconf.dictconfig import DictConfig
+ import torch
+ from torch.utils.tensorboard.writer import SummaryWriter
+@@ -128,28 +129,40 @@ class AbstractTrainer():
+     def train(self) -> None:
+         self.logger.info("Starting training at %d batches.", self.current_batch + 1)
+         self.timer.start()
+-        
+-        for data, target in self.train_iter:
+-            data, target = DeviceHandler.tensor_to_device(data), DeviceHandler.tensor_to_device(target, id=self.target_gpu_id)
+-            model_out, loss = self._train_step(data, target)
+ 
+-            self.training_metrics.add_metric('loss', loss.item())
+-            for metric_fn in self.metric_fns:
+-                self.training_metrics.add_metric(metric_fn.__name__, metric_fn(model_out, target))
+-            
+-            self.current_batch += 1
++        # In-process multi-epoch loop. ProcessingMetagenomicReadDataset is single-pass
++        # (one iter() over the shards then StopIteration), so we re-iterate for
++        # training.max_epochs clean epochs. Doing this in-process (rather than via an
++        # external resume_dir loop) keeps the early-stopping patience counter intact
++        # across epochs and avoids reloading the multi-GB checkpoint every epoch.
++        # Defaults to 1 -> original single-pass behavior for existing configs.
++        max_epochs = OmegaConf.select(self.cfg, "training.max_epochs", default=1) or 1
+ 
+-            if (self.current_batch + 1) % self.logging_interval == 0:
+-                avgs = self.training_metrics.get_avgs()
+-                log_progress(self.logger, self.current_batch + 1, avgs)
++        for epoch in range(max_epochs):
++            self.logger.info("Starting epoch %d/%d (at batch %d).", epoch + 1, max_epochs, self.current_batch + 1)
++            for data, target in self.train_iter:
++                data, target = DeviceHandler.tensor_to_device(data), DeviceHandler.tensor_to_device(target, id=self.target_gpu_id)
++                model_out, loss = self._train_step(data, target)
+ 
+-            if (self.current_batch + 1) % self.evaluation_interval == 0:
+-                self.timer.update_elapsed_time()
+-                self._perform_evaluation()
++                self.training_metrics.add_metric('loss', loss.item())
++                for metric_fn in self.metric_fns:
++                    self.training_metrics.add_metric(metric_fn.__name__, metric_fn(model_out, target))
+ 
+-            if (self.current_batch + 1) % self.max_step == 0:
+-                self.logger.info(f"Maximum number of steps ({self.max_step}) taken. End training.")
+-                exit(0)
++                self.current_batch += 1
++
++                if (self.current_batch + 1) % self.logging_interval == 0:
++                    avgs = self.training_metrics.get_avgs()
++                    log_progress(self.logger, self.current_batch + 1, avgs)
++
++                if (self.current_batch + 1) % self.evaluation_interval == 0:
++                    self.timer.update_elapsed_time()
++                    self._perform_evaluation()
++
++                if self.current_batch >= self.max_step:
++                    self.logger.info(f"Maximum number of steps ({self.max_step}) reached. End training.")
++                    exit(0)
++
++        self.logger.info(f"Completed all {max_epochs} epoch(s) ({self.current_batch} batches). End training.")
+ 
+     def _perform_evaluation(self):
+         logs = self.training_metrics.get_avgs()
+@@ -201,11 +214,16 @@ class AbstractTrainer():
+         self.logger.info("More than {} models are currently saved. Removing worst performing model".format(self.save_n))
+         sort_descending = self.monitor_mode == 'max'
+         self.models_meta.sort(key=operator.itemgetter(1), reverse=sort_descending)
+-        # Get the worst performing model. Max case: Lowest value, Min case: Highest value => always last position in list
+-        file_to_truncate, _, _ = self.models_meta[-1]
++        # Get the worst performing model. Max case: Lowest value, Min case: Highest value => normally last position in list.
++        # Never truncate the entry flagged "current" though - _get_most_current_model_path() (used by resume) depends
++        # on exactly one entry keeping that flag, otherwise resume_dir=... crashes with "nothing to resume from".
++        idx_to_truncate = len(self.models_meta) - 1
++        while idx_to_truncate > 0 and self.models_meta[idx_to_truncate][2]:
++            idx_to_truncate -= 1
++        file_to_truncate, _, _ = self.models_meta[idx_to_truncate]
+         file_path = os.path.join(self.ckpt_dir, file_to_truncate)
+         os.remove(file_path)
+-        self.models_meta.pop()
++        self.models_meta.pop(idx_to_truncate)
+ 
+     def _save_checkpoint(self, logs, override_best=False) -> None:
+         self.logger.info("Saving model at batch %d", self.current_batch + 1)

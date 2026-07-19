@@ -1,0 +1,62 @@
+cfgs:
+  dataset: genus_refSoil
+  model: classification_transformer_64
+  optimizer: adam
+
+paths:
+  data_path_root: /work/ymj1123ntu/mt5m_soil
+  vocabulary_path: /work/ymj1123ntu/vocab_file/vocab_13mer.txt
+  class_weight_path: null
+
+common:
+  experiment_name: ???
+  prepend_cls_token: false
+  resume_model: false
+
+hashing:
+  num_buckets: 22
+  num_hash_functions: 6
+
+multi_level_cls:
+  use: false
+  ranks: Genome,Genus
+  num_classes: 1535,120
+
+mdl_common:
+  input_module: vocab
+  kmer_size: 13
+  kmer_stride: 1  # confirmed: model_utils.py OmegaConf.select("mdl_common.kmer_stride", default=1) -> Read2VocabKmer(stride=1); matches local best_genus_model
+  num_classes: 500
+  class_indices: 1  # header: >lbl|<genus_idx>|<genus_name>|<species_idx>|<accession>-<pos>/<mate> -> split("|")[1] = genus_idx
+  classification_threshold: 0.5
+  sparse_embedding: true
+
+device_settings:
+  use_cpu: false
+  gpu_count: 1
+  gpu_ids: 0
+  split_gpus: false
+
+dataloader:
+  batch_size: 2048  # V100-32GB confirmed OK at embed_dim=64 (see mt_50M/experiments/mt_13mer_stride13_genus_895685)
+  num_workers: 8  # shared by train (16 files) AND val (8 files) dataloaders; must divide evenly into both, 13 crashed on val (8/13<1)
+
+training:
+  save_interval: 1
+  logging_interval: 100
+  evaluation_interval: 200  # one epoch here is ~2441 batches (5M reads / batch 2048); 10000 never fired, zero checkpoints saved
+  max_steps: 300000
+  early_stop_threshold: 15  # ~3000 batches (~1.2 epochs) patience before stopping
+  save_top_n_models: 2
+  use_cudnn_benchmark: true
+  monitor_metric: min loss/val
+  amp: true
+  lr_scheduler_enabled: false
+  warmup_lr_scheduler_enabled: false
+
+# NOTE: model/dataset/optimizer are NOT read from this file at runtime.
+# context_manager.py's training_configs() loads them from:
+#   <this-dir>/model/{cfgs.model}.yaml
+#   <this-dir>/dataset/{cfgs.dataset}.yaml
+#   <this-dir>/optimizer/{cfgs.optimizer}.yaml
+# and overwrites whatever is here — see config/model/, config/dataset/, config/optimizer/ next to this file.

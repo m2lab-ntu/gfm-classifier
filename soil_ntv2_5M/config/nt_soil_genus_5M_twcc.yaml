@@ -31,6 +31,6 @@ training:
   amp: true
   max_grad_norm: 5.0
   early_stopping_patience: 2
-  num_workers: 16
+  num_workers: 8   # gp2d gives 4 CPU/GPU; 16 would thrash. perf-only knob, no effect on results
 output:
   dir: "/work/ymj1123ntu/mt5m_soil/results/nt_soil_genus_5M"

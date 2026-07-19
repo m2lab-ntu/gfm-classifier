@@ -42,31 +42,44 @@ from utils import load_config, save_config, save_json, AverageMeter, EarlyStoppi
 
 
 def _get_amp_dtype(use_amp):
-    """Pick bf16 if available (H100/A100), else fp16.
+    """Pick bf16 only on real Ampere+ (sm_80+) hardware, else fp16.
+    NOTE: torch.cuda.is_bf16_supported() returns True even on V100 (sm_70, no HW bf16)
+    on recent PyTorch, and bf16 then runs a ~4.4x slower emulated path (measured on this
+    V100: fp16 0.76 s/it vs bf16 3.32 s/it). Gate on compute capability instead.
     Returns torch.float16 as fallback even if use_amp=False (won't be used)."""
-    if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
+    if torch.cuda.is_available() and torch.cuda.get_device_capability(0)[0] >= 8:
         return torch.bfloat16
     return torch.float16
 
 
 def train_epoch(model, loader, criterion, optimizer, scheduler, scaler,
                 device, grad_accum, max_grad_norm, use_amp, amp_dtype=None,
-                log_prior=None, rc_consistency=False, lambda_kl=0.1):
+                log_prior=None, rc_consistency=False, lambda_kl=0.1,
+                ckpt_cb=None, ckpt_every=0, resume_offset=0, max_local_steps=None):
     """Train for one epoch with NaN detection, logit adjustment, and RC consistency.
 
     Args:
         log_prior: If not None, Tensor [num_classes] with τ·log(π_c) for logit adjustment.
         rc_consistency: If True, loader yields (fwd_ids, fwd_mask, rc_ids, rc_mask, labels).
         lambda_kl: Weight for KL divergence loss in RC consistency mode.
+        ckpt_cb: Optional callback(step_in_epoch) invoked every `ckpt_every` optimizer
+                 steps for mid-epoch checkpointing. step_in_epoch = resume_offset + local
+                 optimizer steps (so it counts from the epoch start across resumes).
+        ckpt_every: Save cadence in optimizer steps (0 = disabled).
+        resume_offset: optimizer steps already completed for this epoch in a prior run.
+        max_local_steps: if set, stop after this many optimizer steps this run (used to
+                 finish only the REMAINING steps of a resumed partial epoch, keeping the
+                 LR scheduler aligned).
     """
     model.train()
     loss_meter = AverageMeter()
     kl_meter = AverageMeter()
     all_preds, all_labels = [], []
     nan_count = 0
+    opt_step_count = 0
 
     optimizer.zero_grad()
-    pbar = tqdm(loader, desc="  Train", leave=False)
+    pbar = tqdm(loader, desc="  Train", leave=False, initial=resume_offset)
 
     for step, batch in enumerate(pbar):
         # ---- Unpack batch depending on mode ----
@@ -138,6 +151,14 @@ def train_epoch(model, loader, criterion, optimizer, scheduler, scaler,
             if scheduler is not None:
                 scheduler.step()
             optimizer.zero_grad()
+
+            opt_step_count += 1
+            # mid-epoch checkpoint (every ckpt_every optimizer steps)
+            if ckpt_cb is not None and ckpt_every and (opt_step_count % ckpt_every == 0):
+                ckpt_cb(resume_offset + opt_step_count)
+            # stop after the remaining steps of a resumed partial epoch (scheduler stays aligned)
+            if max_local_steps is not None and opt_step_count >= max_local_steps:
+                break
 
         loss_meter.update(loss.item() * grad_accum, labels.size(0))
         if rc_consistency:
@@ -334,14 +355,17 @@ def main():
 
     # ===== Resume / Initialize from checkpoint =====
     resume_epoch = 0
+    resume_step_in_epoch = 0
     resume_ckpt = None
     if args.resume:
         print(f"\n--- Resuming from checkpoint: {args.resume} ---")
         resume_ckpt = torch.load(args.resume, map_location=device, weights_only=False)
         model.load_state_dict(resume_ckpt["model_state_dict"])
         resume_epoch = resume_ckpt.get("epoch", 0)
+        resume_step_in_epoch = resume_ckpt.get("step_in_epoch", 0)  # >0 => mid-epoch checkpoint
         has_optim = "optimizer_state_dict" in resume_ckpt
-        print(f"  Loaded model weights from epoch {resume_epoch}")
+        print(f"  Loaded model weights from epoch {resume_epoch}"
+              + (f", step_in_epoch {resume_step_in_epoch}" if resume_step_in_epoch else ""))
         print(f"  Previous val_acc: {resume_ckpt.get('val_acc', 'N/A')}")
         print(f"  Optimizer/scheduler state: {'found (seamless resume)' if has_optim else 'not found (LR will restart)'}")
         sys.stdout.flush()
@@ -550,7 +574,7 @@ def main():
               f"head: {optimizer.param_groups[-1]['lr']:.6e}")
     elif resume_epoch > 0:
         # Legacy checkpoint without optimizer state: fast-forward scheduler
-        skip_steps = steps_per_epoch * resume_epoch
+        skip_steps = steps_per_epoch * resume_epoch + resume_step_in_epoch
         print(f"\n  ⚠️  No optimizer state in checkpoint — fast-forwarding scheduler by {skip_steps} steps")
         for _ in range(skip_steps):
             scheduler.step()
@@ -589,9 +613,36 @@ def main():
 
     start_time = time.time()
 
+    # Mid-epoch checkpointing: save last.pt every N optimizer steps so a walltime timeout
+    # on a long (e.g. 50M) epoch loses only minutes instead of the whole epoch. 0 = off.
+    ckpt_every_steps = int(train_cfg.get("checkpoint_every_steps", 0) or 0)
+
+    def _save_last_mid(epoch_idx, step_in_epoch):
+        torch.save(dict(
+            model_state_dict=model.state_dict(),
+            optimizer_state_dict=optimizer.state_dict(),
+            scheduler_state_dict=scheduler.state_dict(),
+            epoch=epoch_idx,                 # 0-indexed IN-PROGRESS epoch (not epoch+1)
+            step_in_epoch=step_in_epoch,     # optimizer steps done this epoch so far
+            val_acc=early_stop.best,
+            best_val_acc=early_stop.best,
+            patience_counter=early_stop.counter,
+            config=cfg,
+        ), output_dir / "last.pt")
+
     for epoch in range(resume_epoch, num_epochs):
         print(f"Epoch {epoch + 1}/{num_epochs}")
         monitor.epoch_start(epoch + 1)
+
+        # If resuming mid-epoch, only run the REMAINING steps of this first epoch so the
+        # LR scheduler (restored to its exact mid-epoch step) stays aligned.
+        _partial = (epoch == resume_epoch and resume_step_in_epoch > 0)
+        _offset = resume_step_in_epoch if _partial else 0
+        _max_local = (steps_per_epoch - _offset) if _partial else None
+        if _partial:
+            print(f"  Mid-epoch resume: {_offset}/{steps_per_epoch} steps already done; "
+                  f"running remaining {_max_local}")
+        _cb = (lambda s, e=epoch: _save_last_mid(e, s)) if ckpt_every_steps else None
 
         tr_loss, tr_acc, tr_f1 = train_epoch(
             model, train_loader, criterion, optimizer, scheduler, scaler,
@@ -599,7 +650,10 @@ def main():
             log_prior=log_prior,
             rc_consistency=rc_consistency,
             lambda_kl=lambda_kl,
+            ckpt_cb=_cb, ckpt_every=ckpt_every_steps,
+            resume_offset=_offset, max_local_steps=_max_local,
         )
+        resume_step_in_epoch = 0  # subsequent epochs run in full
 
         va_loss, va_acc, va_f1, va_preds, va_true = validate(
             model, val_loader, criterion, device, use_amp,
@@ -663,6 +717,7 @@ def main():
             optimizer_state_dict=optimizer.state_dict(),
             scheduler_state_dict=scheduler.state_dict(),
             epoch=epoch + 1,
+            step_in_epoch=0,           # epoch boundary (next run starts a fresh epoch)
             val_acc=va_acc,
             best_val_acc=early_stop.best,
             patience_counter=early_stop.counter,
