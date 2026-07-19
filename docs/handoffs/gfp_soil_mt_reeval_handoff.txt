@@ -1,0 +1,87 @@
+【gfp 接手:盤點 soil MT best_genus_model + 重評找回遺失數字;不要重訓】
+
+■ 你在哪
+gfp(登入位址見使用者本機 ~/.ssh/config 的 `gfp` 條目,不記錄於 repo)。ckpt 在本機:
+  /home/ymj1123/MetaTransformer/soil_training_data/best_genus_model
+
+■ 已定案(直接採信)
+- 資料是 RefSoil 衍生閉集模擬短讀;本地切分已驗證可信(by-read,無 read-key leakage)
+- 訓練用的就是本地 `/mnt/Metatransformer_soil_data/` 那份切分(使用者確認)
+- ★ 評估數字遺失 → 本任務是 **inference 重評**,不是重訓
+- 不要估 13-mer vocab、不要改權重、不要動 train
+
+■ Step 0 — 盤點 ckpt(先做,5 分鐘)
+```bash
+ls -lah /home/ymj1123/MetaTransformer/soil_training_data/best_genus_model
+ls -lahR /home/ymj1123/MetaTransformer/soil_training_data/ | head -100
+# 找 config / log / vocab / mapping
+find /home/ymj1123/MetaTransformer/soil_training_data -maxdepth 3 \
+  \( -iname '*config*' -o -iname '*.yaml' -o -iname '*.yml' -o -iname '*.log' \
+     -o -iname '*vocab*' -o -iname '*mapping*' -o -iname '*.pt' -o -iname '*.pth' \
+     -o -iname '*.ckpt' \) 2>/dev/null | head -80
+```
+回報:
+1. best_genus_model 是檔還是目錄?大小、mtime
+2. 旁鄰 config/log/vocab/mapping 路徑
+3. 從 config/log 能讀到的:k、stride、embed dim、num_classes、train/val 路徑、epoch、最佳 metric(若 log 還在)
+4. gfp 上是否看得到訓練用的 val 檔?
+   - `/mnt/Metatransformer_soil_data/genus_val_reads/val_reads.fa`(多半沒有)
+   - 或 `soil_training_data/` 下是否有 val 複本/symlink
+
+■ Step 1 — 決定評估資料從哪來
+優先順序:
+  A. gfp 上已有與訓練相同的 val → 直接用
+  B. 沒有 → 不要幻想 /mnt;回報「需要從本地 rsync 一份 val 子集」
+     建議子集:隨機/多 offset 抽 **5M reads**(約 ~1 GiB 量級,密度≈5.36M reads/GiB)
+     路徑建議收到:
+       /home/ymj1123/MetaTransformer/soil_training_data/eval_subsets/val_5M.fa
+     ★ 子集必須從「訓練時的那份 val」抽,且與 train read-key 不重疊(本地已證 train∩val=0,
+       從 val 抽即可;不要從 train 抽)
+
+若是 B:盤點完 **STOP**,把「請本地產出 val_5M.fa 並 rsync 到 gfp」的指令寫清楚給使用者,
+等檔到位再繼續 Step 2。
+
+■ Step 2 — Smoke 重評(1M 或既有小檔)
+用 MetaTransformer 既有 inference 流程(先找 repo 內評測腳本,不要自寫一套新 metric)。
+必查:
+  - label parsing 對土壤 header:
+      >lbl|<genus_idx>|<genus_name>|<species_idx>|<accession>-<sim_pos>/<mate>
+    與腸道欄位順序不同
+  - ~1.61% 畸形 header(Candidatus idx 40–44,NF==3):照訓練時同樣處理;若不知,
+    先統計被 skip 比例,並報「有效評估 N」
+  - num_classes / idx 空間:文件為 315(含 class 0 空列)、實際有來源 309;
+    與 ckpt 的 classifier 輸出維度必須一致,否則數字無意義
+
+回報 smoke:
+  - N、Top-1(或腳本預設主 metric)、skip 數
+  - 若 Top-1 ≈ 0% 或 ≈ random(1/315) → **STOP**,先查 label 對齊,不要放大評估
+
+■ Step 3 — 正式重評(smoke 正常後)
+目標(擇一,寫進回報):
+  - 若全量 val(~494M)在 gfp 可及且時間可接受 → 可跑全量或分片
+  - 否則固定報 **val_5M**(或 val_50M)Top-1,並註明是子集、抽樣方法、seed
+論文對照用數字可以是子集,但必須可重現(seed + offset 列表寫死)。
+
+輸出建議落在:
+  /home/ymj1123/MetaTransformer/soil_training_data/reeval/
+    metrics.json
+    preds_sample.tsv(可選,前 10K)
+    run_config.txt(ckpt 路徑、data 路徑、N、skip、指令)
+
+■ 不要做
+- 重訓 / fine-tune / 改 ckpt
+- 從 train 抽「假 test」
+- 腸道模型 zero-shot 測土壤
+- 在數字回來前開 NT-v2 大訓(可平行準備 config,但本交接主線是救 MT 數字)
+
+■ 回報格式
+1. ckpt 盤點表
+2. 評估資料來源(A/B)+ 路徑 + N
+3. smoke + 正式 metric(含 skip / 有效 N)
+4. 從 log 挖到的任何舊數字(若有,與重評並陳,標「舊 log」vs「本次重評」)
+5. STOP — 數字救回後等主 session 決定:切正式 test / 開 NT-v2
+
+■ 地雷
+- gfp 多半沒有 /mnt;不要空轉找本地掛載
+- parsing 錯 → 靜默爛數字;smoke 是硬門檻
+- 全量 494M 很重;先子集可重現數字比硬掃全文重要

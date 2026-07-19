@@ -1,0 +1,69 @@
+【交接:驗證土壤資料 train/val/test 本地切分是否可信,不要重跑探勘】
+
+■ 背景(前一個 agent 已在 gfp 驗證過,直接採信,不用重跑 ls/head)
+原始資料:gfp 機器(登入位址見使用者本機 ~/.ssh/config 的 `gfp` 條目,不記錄於 repo)/home/ymj1123/MetaTransformer/soil_training_data
+本地(此機器)已有切分好的版本,路徑:/mnt/Metatransformer_soil_data/
+這是「closed-set genome-labeled」資料(RefSoil 衍生的模擬短讀),不是 OTU/ASV,可與人類腸道
+1,535-genome 閉集結論做 tokenization 對照。已確認(gfp 端原始資料):
+
+- genus_training_reads/reads.fa:438,876,445 條 150bp 模擬 reads(全量、未切分),494GB。
+- header 格式:>lbl|<genus_idx>|<genus_name>|<species_idx>|<accession>-<sim_pos>/<mate>
+  例:>lbl|185|Microcoleus|829|NC_019738.1-1979040/2
+  (以 '|' 分:①>lbl ②genus_idx=185 ③genus_name=Microcoleus ④species_idx=829 ⑤accession-pos/mate)
+  ★ 欄位順序與腸道資料不同(腸道是 sp|seqid|genus|name),parsing 一律按此順序,勿照抄腸道 index。
+- genus_mapping.tab:315 genus(不含 class 0 空列),實際 309 個有來源池。
+- species_mapping.tab:1070 類(每類 = 一支 accession),實際 1015 個檔存在。
+- gfp 端 genus_val_reads/tmp/ 有 1.4TB 壞掉半成品(官方 split_fasta.sh 失敗留下的)——
+  ★ 這是 gfp 那台機器的殘留,與本地 /mnt/Metatransformer_soil_data/ 無關,此處不用管、
+  不用檢查、也不用清。本地端使用者已確認沒有這個問題。
+
+■ ★ 關鍵觀念:兩種切分,結論可比性不同(先讀再驗)
+- 閉集(可比腸道):train/val/test 共用相同 accession/genus,但每條 read 不同(不同 sim_pos)。
+  這才能對照腸道 67%/98.7%。
+- novel-genome(不同題):accession 互斥、測試基因體訓練沒見過。更難,不能跟腸道數字並排。
+- 你要做的是【辨識這份本地切分屬於哪種】+【查真 leakage(相同 read 橫跨切分)】,
+  不是要求 accession 互斥。accession/genus 重疊是閉集切分的預期特徵,不是錯誤。
+
+■ 任務
+本地 /mnt/Metatransformer_soil_data/ 已有分好的檔案。你的工作是【驗證這份切分是否可信】,
+可信就沿用,不可信才回報(不要自己重切)。
+
+Step 1 — 盤點本地切分檔(路徑已知,直接看,不用搜尋)
+  ls -laR /mnt/Metatransformer_soil_data/ | head -80
+  列出:train/val/test 是否齊、各檔大小、read 數。
+  大檔(數十~數百 GB)用 seqkit stats 或算 .fai 行數,不要對大檔跑 grep -c '^>' 硬讀全文。
+
+Step 2 — 驗證(抽樣即可,各切分抽 100K~1M reads,不需掃全量)
+  用這些抽 key(避免 parsing 錯,欄位順序見上方 header 格式):
+    awk -F'|' '/^>/{print $5}' file.fa                          # read key = accession-pos/mate(查真 leakage)
+    awk -F'|' '/^>/{s=$5; sub(/-.*/,"",s); print s}' file.fa    # accession(第一個 '-' 前截斷)
+    awk -F'|' '/^>/{print $3}' file.fa                          # genus_name
+  a) 真 leakage:train 與 val/test 的「read key(第 5 欄全字串)」集合交集應為空
+     (相同模擬 read 不該橫跨切分)。
+  b) 辨識切分型態:比對 accession 集合的重疊——高重疊 = 閉集(可比腸道,我們要的);
+     互斥 = novel-genome(不同題)。照實回報是哪種,別把重疊當錯誤。
+  c) genus 覆蓋:每個 genus 是否 train 有、val/test 也有(否則有「沒訓練過」或
+     「永遠 0 準」死角)。
+  d) label 對齊抽查:抽數十條,確認 header 的 genus_idx↔genus_name 與 genus_mapping.tab
+     一致(防止腸道 species 那種靜默 index 錯位 → ~0% 準確率)。
+
+Step 3 — 判定(不要自己重切)
+  - 通過(相同-read 交集為空、切分型態明確、genus 覆蓋合理)→ 沿用,回報統計即收工。
+  - 不通過(例如相同 read 橫跨切分 = 真 leakage,或按 read 純隨機切導致同一 read 對兩邊)
+    → 停,回報細節。重切策略(閉集要 by-read 切、確保 read key 不重複且兩邊 genome 都
+    覆蓋;novel-genome 才 by-accession 切)是設計決策,留給主 session/使用者拍板。
+
+■ 回報格式
+  1. 本地切分位置與基本統計(train/val/test 各幾條、多大)
+  2. 真 leakage 檢查(相同-read 交集是否為空)+ 切分型態(閉集 or novel-genome,附
+     accession 重疊數字)+ genus 覆蓋 + label 對齊抽查 —— 附抽樣方法與數字
+  3. 判定:可信 / 不可信 + 理由
+  4. 若可信:是否可直接進 Phase 2(NT-v2 vs MetaTransformer 13-mer 對照訓練);
+     提醒 MT 13-mer embedding 在單張 4090 的 OOM 風險(腸道版 33.5M vocab×64=2.1B 參數,
+     土壤版 vocab 大小要重新估)
+  5. 若不可信:不要自己重切,回報問題等主 session/使用者決定切分策略
+
+■ 地雷
+  - 跑 python 前先 conda activate 對應 env。
+  - parsing 一律照上面的 header 欄位順序,不要照抄腸道資料的欄位 index。
+  - 別動 gfp 端任何東西(那是另一台機器);此任務只在本地 /mnt/Metatransformer_soil_data/ 操作。
