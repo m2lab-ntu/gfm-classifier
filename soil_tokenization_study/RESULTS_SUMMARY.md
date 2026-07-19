@@ -18,7 +18,7 @@ the local write-up. **Status date: 2026-07-18.**
 | MetaTransformer | 13-mer, stride 1, embed 64 | **5M** | **0.2051** | 0.183 | fwd | ✅ final |
 | MetaTransformer | 13-mer, stride 1, embed 64 | **50M** | **0.8924** | 0.894 | fwd | ✅ final |
 | MetaTransformer | 6-mer, stride 1, **embed 64** | **50M** | **0.2662** | 0.248 | fwd | ✅ final (⚠ underfits — see §4) |
-| MetaTransformer | 6-mer, stride 1, **embed 128** | **50M** | *~0.30–0.35 (proj.)* | — | fwd | 🟢 running (970180) |
+| MetaTransformer | 6-mer, stride 1, **embed 128** | **50M** | **0.2881** | 0.270 | fwd | ✅ final |
 | NT-v2-500M + LoRA | 6-mer (non-overlap, native) | **5M** | **0.3097** fwd / **0.3198** RC-TTA | — | fwd/tta | ✅ final |
 | NT-v2-500M + LoRA | 6-mer (non-overlap, native) | **50M** | *~0.38 (proj.)* | — | fwd/tta | 🟢 running (970084), val 0.364↑ |
 
@@ -31,8 +31,8 @@ the local write-up. **Status date: 2026-07-18.**
 ### Matrix view
 | 50M soil, Top-1 | 6-mer | 13-mer |
 |---|---|---|
-| **MetaTransformer** (from-scratch) | 0.266 (e64) / ~0.32 (e128) | **0.892** |
-| **NT-v2 + LoRA** (pretrained) | ~0.38 | — (not run; 13-mer is MT-only) |
+| **MetaTransformer** (from-scratch) | 0.266 (e64) / **0.288** (e128) | **0.892** |
+| **NT-v2 + LoRA** (pretrained) | ~0.38 (running) | — (not run; 13-mer is MT-only) |
 
 | 5M soil, Top-1 | 6-mer | 13-mer |
 |---|---|---|
@@ -58,10 +58,15 @@ the local write-up. **Status date: 2026-07-18.**
    - **High data (50M):** MT 13-mer (0.892) **≫** NT-v2 (~0.38) — with enough data the specific
      tokenization + full from-scratch training dominates.
 
-4. **At matched 6-mer tokenization, architecture matters little.** MT-6mer (~0.27–0.32) and
+4. **At matched 6-mer tokenization, architecture matters little.** MT-6mer (0.266 e64 / 0.288 e128) and
    NT-v2-6mer (~0.38) are in the same ballpark and both far below MT-13mer (0.89). The **tokenization
    ceiling dominates the architecture difference** at 6-mer. (This comparison is inherently fuzzy —
    NT-v2 is a 500M pretrained model, MT-6mer is ~5M from-scratch — see §4.)
+
+5. **6-mer capacity is not the bottleneck on soil — the task granularity is.** Doubling the 6-mer
+   embedding (e64 0.266 → e128 0.288) gained only +0.022. The gut 6-mer reached 0.489 at e128, but on an
+   easier 120-genus problem; soil's 309 genera + ambiguous 6-mers cap performance ~0.29 regardless of
+   embedding size. So the 13-mer's win is a genuine tokenization effect, not a capacity artefact.
 
 ---
 
@@ -186,7 +191,7 @@ soil_tokenization_study/
 
 ## 8. To finish (running / TODO)
 
-- [ ] MT-6mer-e128 50M (job 970180): eval `test_final` → fill the e128 cell.
+- [x] MT-6mer-e128 50M (job 970180): **done → 0.2881**.
 - [ ] NT-v2-50M (job 970084): finish training (may need one mid-ckpt resume near 48 h) → RC-TTA eval.
 - [ ] (optional) MT RC-TTA to match NT-v2's protocol.
 - [ ] (optional) multi-seed error bars on headline cells.
