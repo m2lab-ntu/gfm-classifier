@@ -39,9 +39,27 @@ SRR33710519, 3M reads (~135 bp). In-set = 11/17 genera (81.5% of DNA); 18.5% out
 | Kraken2 + Bracken | — | **0.580** | 0.437 | 54.5% | 4 |
 | MT 13-mer 250M | 13-mer | **0.545** | 0.344 | 72.7% | 7 |
 | NT-v2 + LoRA | 6-mer | **0.420** | 0.376 | 72.7% | 7 |
-| MT 6-mer 50M | 6-mer | **0.065** | 0.409 | 72.7% | 10 |
+| MT 6-mer 50M | 6-mer | **0.065**◆ | 0.409 | 72.7% | 10 |
 
-Note: detection sensitivity is coarse here (all hit the same 8/11 → 72.7%). ⚠️ The MT 6-mer
+◆ MT 6-mer single-rep; 2-rep mean = 0.057 — an artefact (see note). **Report the CLEAN table below instead.**
+
+### C-clean. RECOMMENDED for the paper — restricted to expected ≥1% (9 genera)
+
+Excludes the two trace in-set genera (Clostridium 0.0001%, Enterococcus 0.001%) that make the
+11-genus r numerically unstable. This is the metric the paper already argues for
+("we do not rank by r"; "restricting to ≥1% … tighter band"). `d6331_clean_ge1pct_metrics.json`.
+
+| Method | Pearson r | Bray-Curtis | note |
+|---|---|---|---|
+| Kraken2 + Bracken | **0.620** | 0.419 | rep1 |
+| MT 13-mer 250M | **0.610** | 0.312 | rep1 |
+| NT-v2 6-mer | **0.569** | 0.334 | rep1 |
+| MT 6-mer 50M | **0.500** | 0.338 | 2-rep mean (rep1 0.497 / rep2 0.502) |
+
+All 0.50–0.62 → **no clear winner** (matches abstract). MT 6-mer is NOT collapsed once the
+trace-genus artefact is removed. (rep2 = SRR33710518; MT6 confirmed rep-consistent.)
+
+Note: detection sensitivity is coarse in the 11-genus table (all hit the same 8/11 → 72.7%). ⚠️ The MT 6-mer
 r=0.065 is LARGELY A METRIC ARTEFACT — D6331's in-set includes Clostridium (trace, 0.0001%),
 and all three models dump ~20–30% of reads into Clostridium (a shared false attractor); on
 D6331 that spike lands *inside* the in-set correlation and tanks r. On the Kim mock (§E),

@@ -1,0 +1,18 @@
+{
+  "MT 13-mer": {
+    "pearson_r": 0.6096,
+    "bray_curtis": 0.3122
+  },
+  "NT-v2 6-mer": {
+    "pearson_r": 0.5686,
+    "bray_curtis": 0.3335
+  },
+  "Kraken2+Bracken": {
+    "pearson_r": 0.6204,
+    "bray_curtis": 0.4195
+  },
+  "MT 6-mer": {
+    "pearson_r": 0.4997,
+    "bray_curtis": 0.3383
+  }
+}
