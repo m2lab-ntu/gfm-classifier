@@ -1,0 +1,191 @@
+{
+  "read_level_accuracy": 0.450021054320146,
+  "n_reads_total": 99742,
+  "n_genera": 120,
+  "abundance_estimation": {
+    "pearson_r_mean": 0.9878819233858791,
+    "pearson_r_std": 0.001226827324861068,
+    "pearson_r_median": 0.987632402420252,
+    "spearman_r_mean": 0.8222301442354089,
+    "spearman_r_std": 0.016365676010102255,
+    "bray_curtis_mean": 0.20697777777777782,
+    "bray_curtis_std": 0.004664708583913853,
+    "n_samples": 9,
+    "reads_per_sample": 10000
+  },
+  "binary_detection_by_count_threshold": {
+    ">=1_reads": {
+      "threshold_reads": 1,
+      "sensitivity": 0.61615,
+      "specificity": 0.44637,
+      "precision": 0.52249,
+      "tp": 7331,
+      "fp": 6700,
+      "tn": 5402,
+      "fn": 4567
+    },
+    ">=2_reads": {
+      "threshold_reads": 2,
+      "sensitivity": 0.51311,
+      "specificity": 0.56156,
+      "precision": 0.53501,
+      "tp": 6105,
+      "fp": 5306,
+      "tn": 6796,
+      "fn": 5793
+    },
+    ">=5_reads": {
+      "threshold_reads": 5,
+      "sensitivity": 0.37183,
+      "specificity": 0.69931,
+      "precision": 0.54868,
+      "tp": 4424,
+      "fp": 3639,
+      "tn": 8463,
+      "fn": 7474
+    },
+    ">=10_reads": {
+      "threshold_reads": 10,
+      "sensitivity": 0.28391,
+      "specificity": 0.78855,
+      "precision": 0.56897,
+      "tp": 3378,
+      "fp": 2559,
+      "tn": 9543,
+      "fn": 8520
+    },
+    ">=20_reads": {
+      "threshold_reads": 20,
+      "sensitivity": 0.21138,
+      "specificity": 0.87754,
+      "precision": 0.62922,
+      "tp": 2515,
+      "fp": 1482,
+      "tn": 10620,
+      "fn": 9383
+    },
+    ">=50_reads": {
+      "threshold_reads": 50,
+      "sensitivity": 0.09951,
+      "specificity": 0.93819,
+      "precision": 0.61284,
+      "tp": 1184,
+      "fp": 748,
+      "tn": 11354,
+      "fn": 10714
+    }
+  },
+  "binary_detection_by_abundance_threshold": {
+    ">=0.00%": {
+      "sensitivity": 0.61615,
+      "specificity": 0.44637,
+      "precision": 0.52249,
+      "tp": 7331,
+      "fp": 6700,
+      "tn": 5402,
+      "fn": 4567
+    },
+    ">=0.01%": {
+      "sensitivity": 0.61615,
+      "specificity": 0.44637,
+      "precision": 0.52249,
+      "tp": 7331,
+      "fp": 6700,
+      "tn": 5402,
+      "fn": 4567
+    },
+    ">=0.05%": {
+      "sensitivity": 0.52574,
+      "specificity": 0.57141,
+      "precision": 0.53343,
+      "tp": 6087,
+      "fp": 5324,
+      "tn": 7098,
+      "fn": 5491
+    },
+    ">=0.10%": {
+      "sensitivity": 0.46526,
+      "specificity": 0.70516,
+      "precision": 0.54224,
+      "tp": 4788,
+      "fp": 4042,
+      "tn": 9667,
+      "fn": 5503
+    },
+    ">=0.50%": {
+      "sensitivity": 0.48979,
+      "specificity": 0.90102,
+      "precision": 0.6028,
+      "tp": 2759,
+      "fp": 1818,
+      "tn": 16549,
+      "fn": 2874
+    },
+    ">=1.00%": {
+      "sensitivity": 0.51667,
+      "specificity": 0.94819,
+      "precision": 0.63764,
+      "tp": 1860,
+      "fp": 1057,
+      "tn": 19343,
+      "fn": 1740
+    }
+  },
+  "sensitivity_by_abundance": {
+    "<0.01%": {
+      "mean": NaN,
+      "count": 0
+    },
+    "0.01\u20130.1%": {
+      "mean": 0.21904,
+      "count": 1607
+    },
+    "0.1\u20131%": {
+      "mean": 0.51562,
+      "count": 6691
+    },
+    "1\u20135%": {
+      "mean": 0.97536,
+      "count": 2882
+    },
+    ">5%": {
+      "mean": 1.0,
+      "count": 718
+    }
+  },
+  "roc_detection": {
+    "auc": 0.54805,
+    "operating_points": {
+      "spec_80pct": {
+        "target_specificity": 0.8,
+        "achieved_specificity": 0.80008,
+        "sensitivity": 0.271,
+        "threshold_pred_frac": 0.003268
+      },
+      "spec_90pct": {
+        "target_specificity": 0.9,
+        "achieved_specificity": 0.90008,
+        "sensitivity": 0.18067,
+        "threshold_pred_frac": 0.00817
+      },
+      "spec_95pct": {
+        "target_specificity": 0.95,
+        "achieved_specificity": 0.95,
+        "sensitivity": 0.07333,
+        "threshold_pred_frac": 0.023856
+      },
+      "spec_99pct": {
+        "target_specificity": 0.99,
+        "achieved_specificity": 0.99,
+        "sensitivity": 0.02733,
+        "threshold_pred_frac": 0.098693
+      }
+    }
+  },
+  "sample_config": {
+    "reads_per_sample": 3060,
+    "n_partition_samples": 9,
+    "n_sparse_samples": 200,
+    "genera_present_per_sparse_sample": 60
+  }
+}

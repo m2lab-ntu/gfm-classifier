@@ -1,0 +1,191 @@
+{
+  "read_level_accuracy": 0.5022720419443171,
+  "n_reads_total": 573713,
+  "n_genera": 120,
+  "abundance_estimation": {
+    "pearson_r_mean": 0.8940872138171909,
+    "pearson_r_std": 0.0021162701123972993,
+    "pearson_r_median": 0.8945509965876323,
+    "spearman_r_mean": 0.7829390176907325,
+    "spearman_r_std": 0.0054569416475830235,
+    "bray_curtis_mean": 0.28285818181818184,
+    "bray_curtis_std": 0.0016758271671669497,
+    "n_samples": 11,
+    "reads_per_sample": 50000
+  },
+  "binary_detection_by_count_threshold": {
+    ">=1_reads": {
+      "threshold_reads": 1,
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    },
+    ">=2_reads": {
+      "threshold_reads": 2,
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    },
+    ">=5_reads": {
+      "threshold_reads": 5,
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    },
+    ">=10_reads": {
+      "threshold_reads": 10,
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    },
+    ">=20_reads": {
+      "threshold_reads": 20,
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    },
+    ">=50_reads": {
+      "threshold_reads": 50,
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    }
+  },
+  "binary_detection_by_abundance_threshold": {
+    ">=0.00%": {
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    },
+    ">=0.01%": {
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    },
+    ">=0.05%": {
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    },
+    ">=0.10%": {
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    },
+    ">=0.50%": {
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    },
+    ">=1.00%": {
+      "sensitivity": NaN,
+      "specificity": 1.0,
+      "precision": NaN,
+      "tp": 0,
+      "fp": 0,
+      "tn": 24000,
+      "fn": 0
+    }
+  },
+  "sensitivity_by_abundance": {
+    "<0.01%": {
+      "mean": NaN,
+      "count": 0
+    },
+    "0.01\u20130.1%": {
+      "mean": NaN,
+      "count": 0
+    },
+    "0.1\u20131%": {
+      "mean": NaN,
+      "count": 0
+    },
+    "1\u20135%": {
+      "mean": NaN,
+      "count": 0
+    },
+    ">5%": {
+      "mean": NaN,
+      "count": 0
+    }
+  },
+  "roc_detection": {
+    "auc": 0.49985,
+    "operating_points": {
+      "spec_80pct": {
+        "target_specificity": 0.8,
+        "achieved_specificity": 0.80008,
+        "sensitivity": 0.20092,
+        "threshold_pred_frac": NaN
+      },
+      "spec_90pct": {
+        "target_specificity": 0.9,
+        "achieved_specificity": 0.90008,
+        "sensitivity": 0.10025,
+        "threshold_pred_frac": NaN
+      },
+      "spec_95pct": {
+        "target_specificity": 0.95,
+        "achieved_specificity": 0.95,
+        "sensitivity": 0.05075,
+        "threshold_pred_frac": NaN
+      },
+      "spec_99pct": {
+        "target_specificity": 0.99,
+        "achieved_specificity": 0.99,
+        "sensitivity": 0.01117,
+        "threshold_pred_frac": NaN
+      }
+    }
+  },
+  "sample_config": {
+    "reads_per_sample": 0,
+    "n_partition_samples": 11,
+    "n_sparse_samples": 200,
+    "genera_present_per_sparse_sample": 60
+  }
+}

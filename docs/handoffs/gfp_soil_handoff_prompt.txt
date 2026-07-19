@@ -1,0 +1,67 @@
+【gfp 接手:用土壤菌相 dataset 外部驗證 NT-v2 fine-tune 方法】
+
+■ 你在哪、背景
+你在 gfp 機器(2 GPU:RTX 4090 24GB + RTX 4060Ti 16GB)。這是一個總體基因體讀序分類論文的
+「外部驗證」任務。論文主結論(在人類腸道衍生的 1,535-genome 閉集資料上得到):
+  tokenization 決定準確度天花板 ——
+  NT-v2 的非重疊 6-mer 在 50M reads 後飽和(genus ~67%),
+  而重疊長 k-mer(MetaTransformer 13-mer)持續爬升(87.5% → 98.7%)。
+指導教授建議:換一個生態獨立的 dataset(土壤)驗證這套方法/結論是否也成立。
+土壤資料在:/home/ymj1123/MetaTransformer/soil_training_data
+
+■ 分兩階段。★ 先只做 Phase 1,做完回報並停下,不要急著訓練。★
+
+── Phase 1:勘查資料性質(先做這個)──
+最關鍵的判斷:這是「基因體標註的閉集」還是「真實環境 / OTU/ASV」——這會決定整個實驗能不能做、怎麼做。
+執行:
+  cd /home/ymj1123/MetaTransformer/soil_training_data
+  ls -laR . | head -80 ; du -sh .
+  for f in $(ls *.fa *.fasta *.fna *.fq 2>/dev/null|head); do echo "== $f =="; head -4 "$f"; echo "reads:"; grep -c '^>' "$f"; done
+  for f in $(ls *.tsv *.csv *labels* *.txt 2>/dev/null|head); do echo "== $f =="; head -5 "$f"; wc -l "$f"; done
+  nvidia-smi
+回報這張表:
+  1. 檔案清單 + 大小;reads 總數、read 長度
+  2. reads 的 header 格式(逐欄說明);標籤是嵌在 header 還是獨立檔?
+  3. 分類層級(genus / species / OTU / ASV?)與類別數
+  4. ★判定:closed-set genome-labeled(每條 read 來自已知 genome、有明確 taxon 標籤)
+     還是 environmental/OTU(來自未培養、無 genome 參考)?列出你的證據。
+  5. 有沒有已切好的 train/val/test?
+  6. GPU 現況
+→ 做完 STOP,把上述回報給使用者,等實驗設計拍板再進 Phase 2。
+
+── Phase 2:實驗(等 Phase 1 拍板後才做;以下為預案)──
+【若 Phase 1 = closed-set genome-labeled(可與腸道對照)】
+  做「tokenization 對照」:在土壤資料上各訓練並比較——
+    (i)  NT-v2 + LoRA + attention-pool,非重疊 6-mer(= 論文方法)
+    (ii) MetaTransformer,重疊 13-mer(長 k-mer 對照)
+  目標:看是否重現「6-mer 卡低/飽和、13-mer 明顯較高」的模式。
+  - NT-v2 pipeline:git clone git@github.com:m2lab-ntu/gfm-classifier.git;
+    參考 configs/nt_token_genus_v9_50M.yaml,改 data 路徑、num_classes/task 對齊土壤標籤。
+    ★★ 最容易出錯:土壤 reads 的 header 格式與腸道不同(腸道是 >lbl|sp|seqid|genus|name),
+        必須改 data loader 的 label parsing。改完務必先在小樣本驗證 label 對齊正確
+        (若錯位,會像腸道 species 那樣靜默給出 ~0% 準確率)。
+    記憶體:NT-v2 + LoRA 在 4090(24GB)可跑。
+  - MT pipeline:用 gfp 現有的 /home/ymj1123/MetaTransformer。
+    ★★ 記憶體警告:MT 13-mer embedding table 很大(腸道是 33.5M vocab × 64 = 2.1B 參數,
+        fp32 + Adam 狀態 ~24GB)。土壤 13-mer vocab 可能更大 → 單張 4090 很可能 OOM。
+        先估土壤的 13-mer vocab 大小,再決定用 bf16(4090 支援)、sparse embedding + sparse Adam、
+        或縮 batch。跑不動就回報,不要硬撐。
+【若 Phase 1 = environmental / OTU(無乾淨 genome 標籤)】
+  不要硬套閉集對照(閉集的 67%/98.7% 不會重現,也不能並排比)。
+  這其實是更真實的泛化測試,但需重新設計評估方式。STOP,回報使用者/主 session 重新設計。
+
+■ 腸道參考數字(closed-set,clean pool,供對照)
+  NT-v2 6-mer genus:50M 67.1% → 250M 67.3%(飽和);train-fit 天花板 ~66%
+  MT 13-mer genus:50M 87.5% → 250M 98.7%(scale)
+  同法非神經 baseline:13-mer Naive Bayes 74.9% vs 6-mer NB 25.9%
+
+■ 回報格式
+  Phase 1:資料性質表(上列 1–6)+ 你對「能否做閉集對照」的判定與理由。
+  Phase 2(若執行):每個 setting 的 test 準確率;你改了哪些(data loader / label parsing /
+    config / 記憶體處理)附 檔案:行號;是否重現腸道的 tokenization 模式。
+
+■ 地雷
+  - 跑 python 前先 conda activate 對應 env(沒有就用 repo 的 environment.yml 建)。
+  - 改 label parsing 後一定先小樣本驗證對齊(最容易靜默給錯數字)。
+  - NT-v2 LoRA 用 4090;MT 13-mer 注意 OOM。
+  - 別動 /home/ymj1123/MetaTransformer 既有的東西,新實驗開新目錄。

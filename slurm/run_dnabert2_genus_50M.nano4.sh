@@ -7,7 +7,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=128G
-#SBATCH -t 01:00:00
+#SBATCH -t 04:00:00
 #SBATCH -o /work/ymj1123ntu/logs/dnabert2_50M-%j.out
 #SBATCH -e /work/ymj1123ntu/logs/dnabert2_50M-%j.err
 
@@ -89,13 +89,13 @@ if [ -f "${CKPT_DIR}/last.pt" ]; then
     python -u train.py \
         --config /tmp/dnabert2_nano4.yaml \
         --resume "${CKPT_DIR}/last.pt" \
-        --time_limit_sec 3300 \
+        --time_limit_sec 13800 \
         2>&1
 else
     echo "=== Starting training from scratch ==="
     python -u train.py \
         --config /tmp/dnabert2_nano4.yaml \
-        --time_limit_sec 3300 \
+        --time_limit_sec 13800 \
         2>&1
 fi
 

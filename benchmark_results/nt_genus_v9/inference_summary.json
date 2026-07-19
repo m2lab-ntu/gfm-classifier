@@ -1,0 +1,6 @@
+{
+  "num_reads": 100000,
+  "num_classes": 120,
+  "read_accuracy": 0.66604,
+  "checkpoint": "/work/ymj1123ntu/checkpoints/nt_token_genus_v9_50M_best.pt"
+}

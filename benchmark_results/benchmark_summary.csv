@@ -1,0 +1,8 @@
+model,n_reads,elapsed_sec,reads_per_sec,ms_per_read,peak_gpu_mib
+NT-v2_sp_v4_species,100000,98.73,1012.9,0.9873,6747
+MT_13mer_stride1_species,100000,113.34,882.3,1.1334,9355
+MT_13mer_stride1_genus,100000,93.86,1065.5,0.9386,9355
+MT_6mer_stride1_species,100000,40.81,2450.6,0.4081,1373
+MT_6mer_stride6_species,100000,33.00,3030.5,0.3300,857
+MT_13mer_stride13_genus,100000,67.65,1478.2,0.6765,8959
+NT-v2_v9_genus,100000,81.88,1221.4,0.8188,6731

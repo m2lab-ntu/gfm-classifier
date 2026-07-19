@@ -1,0 +1,15 @@
+model,phase,batch,tokens_per_read,reads_per_sec,ms_per_read,peak_gpu_mib
+NT-v2_v9_genus,infer,128,32,4397.4,0.2274,2116
+NT-v2_v9_genus,train,128,32,1814.5,0.5511,8827
+NT-v2_sp_v4_species,infer,128,32,4340.1,0.2304,2119
+NT-v2_sp_v4_species,train,128,32,1646.4,0.6074,8840
+MT_13mer_stride1_species,infer,128,138,194732.5,0.0051,8266
+MT_13mer_stride1_species,train,128,138,8176.0,0.1223,16456
+MT_13mer_stride1_genus,infer,128,138,197137.4,0.0051,8266
+MT_13mer_stride1_genus,train,128,138,8182.0,0.1222,16455
+MT_6mer_stride1_species,infer,128,145,186566.8,0.0054,90
+MT_6mer_stride1_species,train,128,145,47790.5,0.0209,219
+MT_6mer_stride6_species,infer,128,25,197893.1,0.0051,44
+MT_6mer_stride6_species,train,128,25,45413.9,0.0220,95
+MT_13mer_stride13_genus,infer,128,11,204662.6,0.0049,8226
+MT_13mer_stride13_genus,train,128,11,8599.7,0.1163,16445

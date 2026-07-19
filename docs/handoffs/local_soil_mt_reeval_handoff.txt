@@ -1,0 +1,72 @@
+【本地接手:盤點 soil MT best_genus_model + 重評找回遺失數字;不要重訓】
+
+■ 你在哪
+本地 Windows/WSL 或本機 Linux。模型+資料都在本機同一棵樹下:
+  /home/user/Metagenomics/MetaTransformer/soil_training_data/
+切分大檔也可能在(或 symlink 到):
+  /mnt/Metatransformer_soil_data/
+(兩者若都在,先確認是同一份切分;使用者說訓練用的就是這份。)
+
+■ 已定案(直接採信)
+- RefSoil 衍生閉集模擬短讀;本地切分已驗證可信(by-read,無 read-key leakage)
+- train∩val read-key=0;genus 309/309;label idx↔name 1:1
+- ★ 評估數字遺失 → 本任務是 **inference 重評**,不是重訓
+- 不要估 13-mer vocab、不要改權重、不要動 train
+- Nano4 / gfp 不是本任務主場(gfp 也有一份 ckpt 複本,但本地已齊全,優先本地做)
+
+■ Step 0 — 盤點(先做)
+```bash
+BASE=/home/user/Metagenomics/MetaTransformer/soil_training_data
+ls -lah "$BASE"
+ls -lah "$BASE/best_genus_model" 2>/dev/null || ls -lah "$BASE"/best_genus_model*
+ls -lahR "$BASE" | head -120
+find "$BASE" -maxdepth 3 \
+  \( -iname '*config*' -o -iname '*.yaml' -o -iname '*.yml' -o -iname '*.log' \
+     -o -iname '*vocab*' -o -iname '*mapping*' -o -iname '*.pt' -o -iname '*.pth' \
+     -o -iname '*.ckpt' -o -iname '*val*' -o -iname '*train*' \) 2>/dev/null | head -100
+# 大檔切分是否另掛
+ls -lah /mnt/Metatransformer_soil_data/ 2>/dev/null | head -40
+```
+回報:
+1. `best_genus_model` 是檔還是目錄?大小、mtime
+2. config / log / vocab / mapping 路徑
+3. 從 config/log 讀到的:k、stride、embed dim、num_classes、train/val 路徑、epoch、舊 metric(若還在)
+4. val 實際路徑(在 `soil_training_data/` 內,還是 `/mnt/.../genus_val_reads/val_reads.fa`)
+5. MetaTransformer 程式碼根目錄(推斷多半是 `/home/user/Metagenomics/MetaTransformer`)
+
+■ Step 1 — 評估資料
+優先:
+  A. 全量 val 可及 → 可先抽 **val_5M**(多 offset,可重現 seed)做正式可報數字;
+     全量 494M 可選跑,但不是救數字的必要條件
+  B. 只有較小 val 複本 → 用它,註明 N
+抽樣建議寫死:
+  seed=42; 多 offset; 密度參考 ≈5.36M reads/GiB
+  輸出:`$BASE/eval_subsets/val_5M.fa`
+
+Header(與腸道不同):
+  `>lbl|<genus_idx>|<genus_name>|<species_idx>|<accession>-<sim_pos>/<mate>`
+~1.61% 畸形(Candidatus idx 40–44,NF==3):與訓練時同樣處理;統計 skip 與有效 N。
+
+■ Step 2 — Smoke(~1M)
+用 MetaTransformer 既有 inference/eval 腳本,不要自寫新 metric。
+必查:label parsing、num_classes 與 ckpt 輸出維度一致。
+若 Top-1 ≈0% 或 ≈1/315 → **STOP**,先修對齊,不要放大。
+
+■ Step 3 — 正式重評
+固定報 val_5M(或更大子集)Top-1 + 抽樣方法/seed。
+輸出:
+  `$BASE/reeval/metrics.json`
+  `$BASE/reeval/run_config.txt`(ckpt、data、N、skip、完整指令)
+  可選 preds 前 10K
+
+■ 不要做
+- 重訓 / fine-tune
+- 從 train 抽假 test
+- 腸道→土壤 zero-shot
+- 為了重評去 rsync 到 gfp(本地已齊全)
+
+■ 回報格式
+1. ckpt/config/val 盤點表
+2. 評估 N + metric + skip
+3. 舊 log 數字(若有)vs 本次重評(分開標)
+4. STOP — 等主 session 決定切正式 test / 開 NT-v2

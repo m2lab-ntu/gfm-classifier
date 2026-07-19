@@ -1,0 +1,58 @@
+【接手任務:在 Taiwania-2 收尾 NT-v2 overlapping-6mer (ov6mer) genus 訓練】
+
+■ 背景與目標
+這是一個總體基因體分類論文的「確認性」實驗。之前在 Nano4(H200)訓練 NT-v2 +
+overlapping-6mer 的 genus(120 類)分類器,跑到 epoch 15/30(val_acc 0.613)時 Nano4
+免費額度用盡而中斷。現在要在 Taiwania-2(V100)接續跑到收斂,取得最終數字補進論文表格。
+預期 plateau 在 ≤67%(已知結論,本實驗只為乾淨的收斂值,低風險)。
+
+■ 前置檢查:確認檔案已到位(使用者已從 Nano4 rsync 過來)
+1. /work/ymj1123ntu/checkpoints/nt_token_genus_ov6mer_17M/  (last.pt + best.pt + training_history.csv + config.yaml,約 3.8GB;last.pt 為 ep15 續跑點)
+2. /work/ymj1123ntu/data/balanced_species_17M/  (reads.fa, labels.tsv, reads.idx.npy,約 4.7GB)
+先 `ls -la` 確認都在、大小合理。若缺,停下請使用者從 Nano4 端推送(勿自行反向連 Nano4)。
+
+■ 取得程式碼
+git clone(或 pull)git@github.com:m2lab-ntu/gfm-classifier.git 到 /work/ymj1123ntu/gfm-classifier
+先讀 taiwania2_continue/README.md 的 Job 1 段落(完整脈絡)。
+- 訓練入口:scripts/train_ddp.py
+- config:configs/nt_token_genus_ov6mer_17M.yaml(task=genus,batch 256/GPU,amp,30 epochs)
+- slurm:slurm/run_nt_genus_ov6mer.sh(會偵測 last.pt 自動 --resume)
+- 評估:slurm/run_ov6mer_eval.sh
+
+■ ★ V100 關鍵調整(最重要,不改會 OOM 或報錯)
+config 與 slurm 是為 Nano4 H200 寫的,V100(Volta, CC 7.0)必須改:
+1. AMP dtype:V100 無 BF16 硬體 → 確認 train_ddp.py 的 autocast 用 fp16(非 bf16)。
+   若程式寫死 bf16,改 torch.float16。
+2. batch_size:config 是 256/GPU(H200 80GB)。V100(16 或 32GB)很可能 OOM →
+   先 `nvidia-smi` 看單卡記憶體,把 config 的 train.batch_size 降到能跑
+   (V100-32GB 試 64~128;16GB 試 32~64),必要時用 gradient accumulation 補回 effective batch。
+3. GPU/節點數:slurm 寫 8 GPU/節點;改成 Taiwania-2 單節點實際 GPU 數
+   (--gres=gpu:N 與 --ntasks-per-node=N 要一致)。
+
+■ 設定 account / partition(Nano4 的值不能用)
+slurm 目前是 -A MST114550 -p 16gpus。用
+  sacctmgr show assoc user=ymj1123ntu format=account,partition
+  sinfo -s
+查 Taiwania-2 上可用的 account 與 GPU partition,改掉 slurm 的 -A / -p。
+walltime 保持長(-t 盡量長,如 2-00:00:00 以上);V100 比 H200 慢,一個 job 可能跑不完 15
+個 epoch —— 沒關係,slurm 已設計成從 last.pt 自動 resume,不夠就再 submit 同一腳本。
+
+■ 提交 + 監控
+sbatch slurm/run_nt_genus_ov6mer.sh(偵測 last.pt 後 --resume,從 ep15 續)。
+監控 /work/ymj1123ntu/logs/nt_ov6mer-*.out 的 `Epoch NN/30 | val_acc=...`。
+跑到 epoch 30 或 early-stop(val 連續數 epoch 不升)為止。
+
+■ 訓練完:評估
+sbatch slurm/run_ov6mer_eval.sh(在 clean_common 測試集算 genus Top-1,含 RC-TTA),與其他 setting 一致。
+
+■ 回報格式(做完回這些)
+1. 最終 epoch 與 val_acc(收斂值)
+2. clean_common 的 genus Top-1(forward 與 RC-TTA)
+3. 你為 V100 改了哪些(dtype / batch_size / GPU 數 / account / partition),附 檔案:行號
+4. 任何卡住或異常
+
+■ 地雷
+- 跑 python 前先 `conda activate gfm`(沒有就用 repo 的 environment.yml 建)。
+- 用單一長 job + 從 last.pt resume,別搞短 job 的 resume-chain(Nano4 曾因 walltime 太緊
+  出現「跑完一個 epoch 卻在存 last.pt 前被砍」的競態,原地重跑同一 epoch)。
+- 這是確認性實驗,別動 repo 裡其他實驗的檔。

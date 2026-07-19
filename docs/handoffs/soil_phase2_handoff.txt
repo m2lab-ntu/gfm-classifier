@@ -1,0 +1,63 @@
+【交接:土壤 Phase 2 — 沿用既有 MT 13-mer;補 test(若缺)+ 訓 NT-v2 對照】
+
+■ 你在哪
+本地機,資料:/mnt/Metatransformer_soil_data/
+(Nano4 看不到此掛載;Nano4 上也找不到 soil MT ckpt。)
+
+■ Phase 1 已定案(直接採信)
+- 切分可信、閉集 by-read、train∩val read-key=0、genus 309/309
+- train ~369GiB/~1.98B;val ~92GiB/~494M;本地目前無獨立 test 目錄
+- header:>lbl|<genus_idx>|<genus_name>|<species_idx>|<accession>-<sim_pos>/<mate>
+  ~1.61% 畸形(Candidatus idx 40–44)NF==3;parsing 必須分辨
+
+■ ★ 重要更新(使用者 2026-07-09)
+土壤 **MT 13-mer 模型已經有了** →
+  - 不要重訓 MT
+  - 不要先估 13-mer vocab / OOM(那是為「要不要重訓」準備的,現在不需要)
+  - Phase 2 主軸改成:找到既有 MT → 對齊同一 test → 補 NT-v2 6-mer 對照臂
+
+■ 先做盤點(STOP 前必須回報這張表)
+1. soil MT 13-mer ckpt 路徑、檔大小、修改時間
+2. 訓練設定:k/stride、embedding dim、num_classes、訓練 reads 量、epoch、用的 train/val 路徑
+3. 既有評估數字(val 或 test Top-1 / 其他 metric)+ 評估腳本
+4. 它當初用的 hold-out 是「現在的 val」還是另有 test?路徑為何?
+5. vocab 檔路徑(若有)
+
+若 ckpt 在 gfp 或其他機:照實報路徑,不要假設在 /mnt。
+
+── Task A:test 對齊(只在需要時切)──
+- 若既有 MT 已有固定 test 檔 → ★ 沿用同一份,NT-v2 也用它(最優先)
+- 若只有 train/val、MT 是在 val 上報的 → 二選一(回報你選哪個,先問使用者若不明):
+    A1:把現有 val 當「評估集」暫用,同時從 val 切出正式 test(50M–100M by-read),
+       之後 MT 與 NT-v2 都在新 test 上重評(MT 只 inference,不重訓)
+    A2:先不切,兩邊都報 val(較弱,論文較難辯,不建議當最終數字)
+- 切分規則(若執行 A1):by-read 閉集、不動 train、read-key 互斥、勿 accession 互斥
+
+── Task B:NT-v2 6-mer + LoRA 土壤版(真正要新做的)──
+參考:gfm-classifier configs/nt_token_genus_v9_50M.yaml
+必改:
+  - data 路徑 → 土壤 train / (val|test)
+  - num_classes 對齊土壤(315 含空類 or 309——以 mapping/實際 idx 為準,先小樣本驗證)
+  - ★ label parsing:土壤 header 欄位順序 ≠ 腸道;改完必須抽樣確認 genus_idx↔name 1:1
+  - 畸形 NF==3 header 的處理策略寫死(跳過 / 仍用 genus_idx)
+建議先小規模 smoke(例如 1M–5M)確認 loss/acc 不是 ~0%,再拉到與腸道可比的 50M 量級。
+
+── Task C:並排評估(同一 test)──
+對同一 test 報:
+  - MT soil 13-mer Top-1(既有 ckpt,只 inference)
+  - NT-v2 soil 6-mer Top-1
+目標:看是否重現「6-mer 卡低/飽和、13-mer 明顯較高」(主張 b)
+不要做腸道→土壤 zero-shot。
+
+■ 回報格式
+  1. MT ckpt 盤點表(路徑/設定/既有數字/用的 hold-out)
+  2. test 決策與驗證(若有新切)
+  3. NT-v2:改了哪些檔(路徑:行號)、smoke 結果、正式跑狀態
+  4. 同 test 並排數字
+  中途若只完成盤點 → STOP 回報,等主 session 拍板再開訓
+
+■ 地雷
+  - 不要重訓 MT;不要估 vocab 當主線
+  - 不要做成 novel-genome;不要動 train 重切
+  - parsing 錯會靜默 ~0%——小樣本對齊是硬門檻
+  - Nano4 目前看不到 soil 資料與 soil ckpt;本任務在有資料/ckpt 的那台做

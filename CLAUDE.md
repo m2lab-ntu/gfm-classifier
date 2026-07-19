@@ -3,14 +3,16 @@
 This is the **clean repo** for the token-level GFM classifier project.
 Old working directory: `/work/ymj1123ntu/token_level_gfm_classifier` (kept as data stash, not source of truth).
 
+> **跨 session 工作守則(鐵律、模型調度、判斷 rubric)在 `~/.claude/CLAUDE.md` 與 `~/.claude/playbook/`**。本檔只放這個 repo 的結構與指令。
+
 ## Environment
 
-- **TWCC (Nano5)**: H100 cluster, `nano5.nchc.org.tw`, budget exhausted as of 5/30
-- **Taiwana-2**: V100 cluster, hosts MetaTransformer training (`/work/ymj1123ntu/MetaTransformer_experiments/`)
-- **Nano4**: H200, free 1-month service (target migration destination)
-- **Local**: personal machine (ran Kraken2 baseline, no GPU)
+- **Nano4**: H200, 免費額度**已耗盡(2026-07)**,`sbatch` 會被 wallet 負值擋下。只有帳號 `MST114550` 能用。shell 輸出可能不可信,關鍵數字交叉驗證。
+- **Taiwania-2**: V100 cluster,**續跑訓練的目的地**(交接包見 `taiwania2_continue/`)。原 MetaTransformer 訓練也在此。
+- **本地 4090**: real-world / 新基因體泛化評估(純推論,不需 HPC;交接包見 `local_realworld_eval/`)。
+- **TWCC (Nano5)**: H100,budget 已於 5/30 耗盡(歷史)。
 
-Python: Miniconda `gfm` env (`conda activate gfm`).
+Python: 跑任何 python 前先 `conda activate gfm`(Miniconda,Python 3.11,PyTorch 2.5.1+cu121)。
 
 ## Layout
 
