@@ -1,0 +1,35 @@
+{
+  "mock_community": "ZymoBIOMICS Gut Microbiome Standard (D6331)",
+  "sra_accession": "SRR33710519",
+  "sra_title": "ZymoBIOMICS Gut Microbiome Standard (catalogue no. D6331) Replicate 1",
+  "platform": "Illumina, WGS RANDOM, paired-end",
+  "reads_used": "3,000,000 R1 reads (subsampled from 23,342,973); single-end used for per-read genus classification",
+  "read_length_bp": "median 135 (min 50, max 135); training was 150 bp",
+  "composition_reference": "Genomic DNA % (datasheet Table 1) \u2014 correct reference for shotgun read-count abundance",
+  "in_set_genera": 11,
+  "in_set_expected_fraction_pct": 81.5,
+  "out_of_set_expected_fraction_pct": 18.51,
+  "out_of_set_note": "Escherichia 14% (no Escherichia among the 120 genera), Clostridioides 1.5%, Candida 1.5%, Saccharomyces 1.4%, Methanobrevibacter 0.1%, Salmonella 0.01%",
+  "models": {
+    "NT-v2 v9 (RC-TTA)": {
+      "exp_name": "NT-v2 v9 (RC-TTA)",
+      "n_in_set_genera": 11,
+      "out_of_set_expected_fraction": 18.51,
+      "pearson_r_in_set": 0.4202792913207561,
+      "bray_curtis_in_set": 0.3763699471436744,
+      "detect_threshold": 0.01,
+      "detection_sensitivity_in_set": 0.7272727272727273,
+      "false_positive_genera": 7
+    },
+    "MT 13-mer 250M": {
+      "exp_name": "MT 13-mer 250M",
+      "n_in_set_genera": 11,
+      "out_of_set_expected_fraction": 18.51,
+      "pearson_r_in_set": 0.5453745728723822,
+      "bray_curtis_in_set": 0.343970142683495,
+      "detect_threshold": 0.01,
+      "detection_sensitivity_in_set": 0.7272727272727273,
+      "false_positive_genera": 7
+    }
+  }
+}

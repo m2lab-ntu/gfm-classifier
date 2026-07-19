@@ -4,6 +4,10 @@ All genus-level unless noted. "closed-set" = same reference genomes as training;
 "new-genome/out-of-genome" = unseen accessions of the same genera; "real mock" =
 real Illumina reads of a defined community.
 
+> **Paper direction review (2026-07):** full experiment pack + decision checklist →
+> [`docs/paper_direction_review_2026_07/README.md`](docs/paper_direction_review_2026_07/README.md)
+> (matched-reference Kraken 1,535, D6331 two-rep mock, Track A OOD).
+
 ## A. Closed-set Top-1 (same-genome)
 
 | Model | Gut (120 genera) | Soil (309 genera) |
@@ -44,11 +48,24 @@ D6331 that spike lands *inside* the in-set correlation and tanks r. On the Kim m
 where Clostridium is NOT in the composition, the same spike becomes a false positive and MT
 6-mer's r is normal (0.526). **Do not use D6331's 6-mer collapse as evidence that 13-mer > 6-mer.**
 
-## D. Kraken2 / Bracken baselines (100K balanced_50M test)
+## D. Kraken2 / Bracken baselines (100K balanced_50M / TWCC test)
 
-- Kraken2 classification: species **66.2%** all / **94.6%** classified · genus **69.5%** / **99.3%**
-- Genus abundance: raw Kraken2 r=**0.845** (BC 0.177) → **Kraken2+Bracken r=0.997** (BC 0.060)
-  (Bracken redistributes the 19,508 reads Kraken2 strands at the flat-taxonomy root.)
+### D1. Old custom DB (1,316 genomes; 219 GCF missing)
+
+- Kraken2 classification: species **66.2%** all / **94.6%** classified
+- Genus abundance (full 100K report): raw r=**0.845** (BC 0.177) → **Kraken2+Bracken r=0.997** (BC 0.060)
+- Paper table used **coverage-matched 85,819** reads: genus raw **77.7%**, r=**0.823**; Bracken r=**0.997**
+
+### D2. Matched-reference DB (1,535 genomes; CrucialX9 FASTAs) — 2026-07
+
+DB: `/nas2/hierachical_test/kraken2_db_1535/` · metrics: `docs/paper_direction_review_2026_07/kraken_matched_1535/`
+
+| Setting | Kraken raw genus acc | raw r | Bracken r |
+|---|---:|---:|---:|
+| Full 100K (fair) | **80.0%** | 0.832 | **1.000** (BC 0.004) |
+| Legacy 85,819 subset | 77.2% | 0.824 | (full-report Bracken only) |
+
+Species top-1 all: **79.5%** (was 66.2%). Vs neural on full 100K: MT 13-mer **94.3%**, NT-v2 RC-TTA **67.4%**, MT 6-mer **48.8%**.
 
 ## E. Kim gut mock (DDBJ PRJDB10817, DRR466867) — real, high-overlap
 

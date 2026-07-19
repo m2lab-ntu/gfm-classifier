@@ -1,0 +1,109 @@
+{
+  "mock_community": "ZymoBIOMICS Gut Microbiome Standard (D6331)",
+  "composition_reference": "Genomic DNA %",
+  "replicates": {
+    "rep1": {
+      "accession": "SRR33710519",
+      "reads": "3M R1",
+      "bracken_read_len": 150
+    },
+    "rep2": {
+      "accession": "SRR33710518",
+      "reads": "3M R1",
+      "bracken_read_len": 150,
+      "note": "reads median ~135bp; bracken -r 150 because only database150mers.kmer_distrib exists"
+    }
+  },
+  "models": {
+    "NT-v2 v9 (RC-TTA)": {
+      "rep1": {
+        "pearson_r": 0.4202792913207561,
+        "pearson_ci95": [
+          -0.36273064196866045,
+          0.8818506553985047
+        ],
+        "spearman_rho": 0.33847921918218526,
+        "bray_curtis": 0.3763699471436744,
+        "pearson_r_filtered_ge_1pct": 0.5686468010035215,
+        "sens_expected_ge_1pct": 0.7777777777777778,
+        "fp_genera": 7
+      },
+      "rep2": {
+        "pearson_r": 0.4027841971433288,
+        "pearson_ci95": [
+          -0.37738588039815407,
+          0.872655769209513
+        ],
+        "spearman_rho": 0.33847921918218526,
+        "bray_curtis": 0.3916640603989743,
+        "pearson_r_filtered_ge_1pct": 0.5653676453013415,
+        "sens_expected_ge_1pct": 0.8888888888888888,
+        "fp_genera": 7
+      },
+      "mean_r": 0.4115317442320424,
+      "mean_bc": 0.3840170037713243,
+      "mean_rho": 0.33847921918218526,
+      "mean_r_filtered_1pct": 0.5670072231524315
+    },
+    "MT 13-mer 250M": {
+      "rep1": {
+        "pearson_r": 0.5453745728723822,
+        "pearson_ci95": [
+          -0.17254101275319395,
+          0.9122630532746336
+        ],
+        "spearman_rho": 0.4385927910529725,
+        "bray_curtis": 0.343970142683495,
+        "pearson_r_filtered_ge_1pct": 0.6095620044030851,
+        "sens_expected_ge_1pct": 0.7777777777777778,
+        "fp_genera": 7
+      },
+      "rep2": {
+        "pearson_r": 0.5302899746444091,
+        "pearson_ci95": [
+          -0.2017200700458212,
+          0.9025928102823428
+        ],
+        "spearman_rho": 0.4385927910529725,
+        "bray_curtis": 0.3617807853063186,
+        "pearson_r_filtered_ge_1pct": 0.6058378511915494,
+        "sens_expected_ge_1pct": 0.7777777777777778,
+        "fp_genera": 7
+      },
+      "mean_r": 0.5378322737583956,
+      "mean_bc": 0.35287546399490677,
+      "mean_rho": 0.4385927910529725,
+      "mean_r_filtered_1pct": 0.6076999277973172
+    },
+    "Kraken2+Bracken": {
+      "rep1": {
+        "pearson_r": 0.5796847989859609,
+        "pearson_ci95": [
+          0.08310990840739892,
+          0.8965569737242775
+        ],
+        "spearman_rho": 0.5720775535473553,
+        "bray_curtis": 0.4367367914631497,
+        "pearson_r_filtered_ge_1pct": 0.6203683735807768,
+        "sens_expected_ge_1pct": 0.5555555555555556,
+        "fp_genera": 4
+      },
+      "rep2": {
+        "pearson_r": 0.5764872359326444,
+        "pearson_ci95": [
+          0.06591875437466096,
+          0.896613686361601
+        ],
+        "spearman_rho": 0.5720775535473553,
+        "bray_curtis": 0.43136684376534595,
+        "pearson_r_filtered_ge_1pct": 0.6216183330160776,
+        "sens_expected_ge_1pct": 0.5555555555555556,
+        "fp_genera": 4
+      },
+      "mean_r": 0.5780860174593027,
+      "mean_bc": 0.4340518176142478,
+      "mean_rho": 0.5720775535473553,
+      "mean_r_filtered_1pct": 0.6209933532984272
+    }
+  }
+}

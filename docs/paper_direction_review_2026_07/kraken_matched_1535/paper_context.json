@@ -1,0 +1,49 @@
+{
+  "paper_table_coverage_matched_old_db": {
+    "MT_13mer": {
+      "read_acc": 0.9489,
+      "pearson_r": 0.999,
+      "BC": 0.029
+    },
+    "NT_v2": {
+      "read_acc": 0.6888,
+      "pearson_r": 0.992,
+      "BC": 0.116
+    },
+    "Kraken2_raw": {
+      "read_acc": 0.7768,
+      "pearson_r": 0.823,
+      "BC": 0.126
+    },
+    "Kraken2_Bracken_full_or_note": {
+      "pearson_r": 0.997,
+      "BC": 0.06
+    }
+  },
+  "old_db_species_metadata": {
+    "n_total": 100000,
+    "n_classified": 70010,
+    "n_unclassified": 29990,
+    "classified_rate": 0.7001,
+    "top1_all_reads": 0.66234,
+    "top1_classified_only": 0.9460648478788745,
+    "kraken2_k": 35,
+    "kraken2_minimizer_len": 31,
+    "taxid_offset": 2,
+    "db_species": 1535,
+    "test_species": 1535
+  },
+  "new_db_species_metadata": {
+    "n_total": 100000,
+    "n_classified": 79974,
+    "n_unclassified": 20026,
+    "classified_rate": 0.79974,
+    "top1_all_reads": 0.79515,
+    "top1_classified_only": 0.9942606347062796,
+    "kraken2_k": 35,
+    "kraken2_minimizer_len": 31,
+    "taxid_offset": 2,
+    "db_species": 1535,
+    "test_species": 1535
+  }
+}

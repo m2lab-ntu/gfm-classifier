@@ -1,0 +1,10 @@
+{
+  "exp_name": "MT 6-mer (D6331 rep1)",
+  "n_in_set_genera": 11,
+  "out_of_set_expected_fraction": 18.51,
+  "pearson_r_in_set": 0.0646589389776678,
+  "bray_curtis_in_set": 0.40917527528709713,
+  "detect_threshold": 0.01,
+  "detection_sensitivity_in_set": 0.7272727272727273,
+  "false_positive_genera": 10
+}

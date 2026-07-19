@@ -37,6 +37,11 @@ python scripts/train.py --config configs/nt_token_genus_v9_50M.yaml
 
 See [`PROGRESS.md`](./PROGRESS.md) for the latest project state.
 
+**Paper direction review pack (Jul 2026):** matched-reference Kraken (1,535),
+D6331 two-rep mock, Track A out-of-genome — start at
+[`docs/paper_direction_review_2026_07/README.md`](docs/paper_direction_review_2026_07/README.md).
+Consolidated numbers: [`RESULTS_SUMMARY.md`](./RESULTS_SUMMARY.md).
+
 For environment-specific status (what's installed, what's running, budget, etc.):
 - [`envs/twcc/STATUS.md`](./envs/twcc/STATUS.md) — TWCC Nano5 H100 cluster
 - [`envs/taiwana2/STATUS.md`](./envs/taiwana2/STATUS.md) — Taiwana-2 V100 cluster (MT models)

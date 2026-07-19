@@ -1,0 +1,13 @@
+{
+  "n_total": 100000,
+  "n_classified": 79974,
+  "n_unclassified": 20026,
+  "classified_rate": 0.79974,
+  "top1_all_reads": 0.79515,
+  "top1_classified_only": 0.9942606347062796,
+  "kraken2_k": 35,
+  "kraken2_minimizer_len": 31,
+  "taxid_offset": 2,
+  "db_species": 1535,
+  "test_species": 1535
+}

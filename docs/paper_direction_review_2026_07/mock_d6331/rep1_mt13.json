@@ -1,0 +1,309 @@
+{
+  "primary": {
+    "n_in_set_genera": 11,
+    "out_of_set_expected_fraction": 18.51,
+    "pearson_r_in_set": 0.5453745728723822,
+    "pearson_r_bootstrap_mean": 0.5240229858523753,
+    "pearson_r_bootstrap_ci95": [
+      -0.17254101275319395,
+      0.9122630532746336
+    ],
+    "spearman_rho_in_set": 0.4385927910529725,
+    "bray_curtis_in_set": 0.343970142683495,
+    "filtered_ge_0.5pct": {
+      "n": 9,
+      "pearson_r": 0.6095620044030851,
+      "spearman_rho": 0.6207522318391883,
+      "bray_curtis": 0.31223309928873816,
+      "genera": [
+        "Bacteroides",
+        "Roseburia",
+        "Faecalibacterium",
+        "Veillonella",
+        "Prevotella",
+        "Fusobacterium",
+        "Lactobacillus",
+        "Bifidobacterium",
+        "Akkermansia"
+      ]
+    },
+    "filtered_ge_1pct": {
+      "n": 9,
+      "pearson_r": 0.6095620044030851,
+      "spearman_rho": 0.6207522318391883,
+      "bray_curtis": 0.31223309928873816,
+      "genera": [
+        "Bacteroides",
+        "Roseburia",
+        "Faecalibacterium",
+        "Veillonella",
+        "Prevotella",
+        "Fusobacterium",
+        "Lactobacillus",
+        "Bifidobacterium",
+        "Akkermansia"
+      ]
+    },
+    "detection_sensitivity_legacy_all_present": 0.7272727272727273,
+    "detection_sensitivity_expected_ge_1pct": 0.7777777777777778,
+    "n_expected_ge_1pct": 9,
+    "detect_threshold": 0.01,
+    "false_positive_genera": 7,
+    "false_positive_names": [
+      "Alistipes",
+      "Bacillus",
+      "Blautia",
+      "Citrobacter",
+      "Enterobacter",
+      "Klebsiella",
+      "Ruminococcus"
+    ],
+    "per_genus": [
+      {
+        "genus_name": "Bacteroides",
+        "expected_raw": 14.0,
+        "expected_renorm": 0.17177682264411154,
+        "pred_raw_slice": 0.2536736666666667,
+        "pred_renorm": 0.3404604365468154,
+        "abs_err_renorm": 0.16868361390270387
+      },
+      {
+        "genus_name": "Roseburia",
+        "expected_raw": 14.0,
+        "expected_renorm": 0.17177682264411154,
+        "pred_raw_slice": 0.0031793333333333335,
+        "pred_renorm": 0.004267046039180949,
+        "abs_err_renorm": 0.16750977660493058
+      },
+      {
+        "genus_name": "Faecalibacterium",
+        "expected_raw": 14.0,
+        "expected_renorm": 0.17177682264411154,
+        "pred_raw_slice": 0.083179,
+        "pred_renorm": 0.1116361781798172,
+        "abs_err_renorm": 0.06014064446429433
+      },
+      {
+        "genus_name": "Veillonella",
+        "expected_raw": 14.0,
+        "expected_renorm": 0.17177682264411154,
+        "pred_raw_slice": 0.166577,
+        "pred_renorm": 0.22356628058355366,
+        "abs_err_renorm": 0.05178945793944212
+      },
+      {
+        "genus_name": "Prevotella",
+        "expected_raw": 6.0,
+        "expected_renorm": 0.0736186382760478,
+        "pred_raw_slice": 0.05946666666666667,
+        "pred_renorm": 0.07981138743865394,
+        "abs_err_renorm": 0.006192749162606148
+      },
+      {
+        "genus_name": "Fusobacterium",
+        "expected_raw": 6.0,
+        "expected_renorm": 0.0736186382760478,
+        "pred_raw_slice": 0.04512533333333334,
+        "pred_renorm": 0.060563600817798297,
+        "abs_err_renorm": 0.0130550374582495
+      },
+      {
+        "genus_name": "Lactobacillus",
+        "expected_raw": 6.0,
+        "expected_renorm": 0.0736186382760478,
+        "pred_raw_slice": 0.034536333333333336,
+        "pred_renorm": 0.0463518948493918,
+        "abs_err_renorm": 0.027266743426655998
+      },
+      {
+        "genus_name": "Bifidobacterium",
+        "expected_raw": 6.0,
+        "expected_renorm": 0.0736186382760478,
+        "pred_raw_slice": 0.009499,
+        "pred_renorm": 0.01274879544752983,
+        "abs_err_renorm": 0.06086984282851797
+      },
+      {
+        "genus_name": "Akkermansia",
+        "expected_raw": 1.5,
+        "expected_renorm": 0.01840465956901195,
+        "pred_raw_slice": 0.0024413333333333335,
+        "pred_renorm": 0.003276561668165367,
+        "abs_err_renorm": 0.015128097900846581
+      },
+      {
+        "genus_name": "Enterococcus",
+        "expected_raw": 0.001,
+        "expected_renorm": 1.2269773046007967e-05,
+        "pred_raw_slice": 0.002028,
+        "pred_renorm": 0.002721818840676965,
+        "abs_err_renorm": 0.002709549067630957
+      },
+      {
+        "genus_name": "Clostridium",
+        "expected_raw": 0.0001,
+        "expected_renorm": 1.2269773046007968e-06,
+        "pred_raw_slice": 0.08538433333333334,
+        "pred_renorm": 0.11459599958841661,
+        "abs_err_renorm": 0.114594772611112
+      }
+    ],
+    "remap_clostridioides": false,
+    "exp_name": "MT 13-mer 250M",
+    "n_reads": 3000000
+  },
+  "clostridioides_as_clostridium": {
+    "n_in_set_genera": 11,
+    "out_of_set_expected_fraction": 17.01,
+    "pearson_r_in_set": 0.5691012348040845,
+    "pearson_r_bootstrap_mean": 0.5487679429887453,
+    "pearson_r_bootstrap_ci95": [
+      -0.1284780255922161,
+      0.9160911888936059
+    ],
+    "spearman_rho_in_set": 0.5816121794398114,
+    "bray_curtis_in_set": 0.3334374951700516,
+    "filtered_ge_0.5pct": {
+      "n": 10,
+      "pearson_r": 0.5185680621856954,
+      "spearman_rho": 0.43316048316960803,
+      "bray_curtis": 0.3327925255544201,
+      "genera": [
+        "Bacteroides",
+        "Roseburia",
+        "Faecalibacterium",
+        "Veillonella",
+        "Prevotella",
+        "Fusobacterium",
+        "Lactobacillus",
+        "Bifidobacterium",
+        "Akkermansia",
+        "Clostridium"
+      ]
+    },
+    "filtered_ge_1pct": {
+      "n": 10,
+      "pearson_r": 0.5185680621856954,
+      "spearman_rho": 0.43316048316960803,
+      "bray_curtis": 0.3327925255544201,
+      "genera": [
+        "Bacteroides",
+        "Roseburia",
+        "Faecalibacterium",
+        "Veillonella",
+        "Prevotella",
+        "Fusobacterium",
+        "Lactobacillus",
+        "Bifidobacterium",
+        "Akkermansia",
+        "Clostridium"
+      ]
+    },
+    "detection_sensitivity_legacy_all_present": 0.7272727272727273,
+    "detection_sensitivity_expected_ge_1pct": 0.8,
+    "n_expected_ge_1pct": 10,
+    "detect_threshold": 0.01,
+    "false_positive_genera": 7,
+    "false_positive_names": [
+      "Alistipes",
+      "Bacillus",
+      "Blautia",
+      "Citrobacter",
+      "Enterobacter",
+      "Klebsiella",
+      "Ruminococcus"
+    ],
+    "per_genus": [
+      {
+        "genus_name": "Bacteroides",
+        "expected_raw": 14.0,
+        "expected_renorm": 0.16867246337699138,
+        "pred_raw_slice": 0.2536736666666667,
+        "pred_renorm": 0.3404604365468154,
+        "abs_err_renorm": 0.17178797316982403
+      },
+      {
+        "genus_name": "Roseburia",
+        "expected_raw": 14.0,
+        "expected_renorm": 0.16867246337699138,
+        "pred_raw_slice": 0.0031793333333333335,
+        "pred_renorm": 0.004267046039180949,
+        "abs_err_renorm": 0.16440541733781042
+      },
+      {
+        "genus_name": "Faecalibacterium",
+        "expected_raw": 14.0,
+        "expected_renorm": 0.16867246337699138,
+        "pred_raw_slice": 0.083179,
+        "pred_renorm": 0.1116361781798172,
+        "abs_err_renorm": 0.05703628519717417
+      },
+      {
+        "genus_name": "Veillonella",
+        "expected_raw": 14.0,
+        "expected_renorm": 0.16867246337699138,
+        "pred_raw_slice": 0.166577,
+        "pred_renorm": 0.22356628058355366,
+        "abs_err_renorm": 0.05489381720656228
+      },
+      {
+        "genus_name": "Prevotella",
+        "expected_raw": 6.0,
+        "expected_renorm": 0.07228819859013916,
+        "pred_raw_slice": 0.05946666666666667,
+        "pred_renorm": 0.07981138743865394,
+        "abs_err_renorm": 0.007523188848514786
+      },
+      {
+        "genus_name": "Fusobacterium",
+        "expected_raw": 6.0,
+        "expected_renorm": 0.07228819859013916,
+        "pred_raw_slice": 0.04512533333333334,
+        "pred_renorm": 0.060563600817798297,
+        "abs_err_renorm": 0.011724597772340861
+      },
+      {
+        "genus_name": "Lactobacillus",
+        "expected_raw": 6.0,
+        "expected_renorm": 0.07228819859013916,
+        "pred_raw_slice": 0.034536333333333336,
+        "pred_renorm": 0.0463518948493918,
+        "abs_err_renorm": 0.02593630374074736
+      },
+      {
+        "genus_name": "Bifidobacterium",
+        "expected_raw": 6.0,
+        "expected_renorm": 0.07228819859013916,
+        "pred_raw_slice": 0.009499,
+        "pred_renorm": 0.01274879544752983,
+        "abs_err_renorm": 0.05953940314260933
+      },
+      {
+        "genus_name": "Akkermansia",
+        "expected_raw": 1.5,
+        "expected_renorm": 0.01807204964753479,
+        "pred_raw_slice": 0.0024413333333333335,
+        "pred_renorm": 0.003276561668165367,
+        "abs_err_renorm": 0.014795487979369422
+      },
+      {
+        "genus_name": "Enterococcus",
+        "expected_raw": 0.001,
+        "expected_renorm": 1.2048033098356526e-05,
+        "pred_raw_slice": 0.002028,
+        "pred_renorm": 0.002721818840676965,
+        "abs_err_renorm": 0.0027097708075786084
+      },
+      {
+        "genus_name": "Clostridium",
+        "expected_raw": 1.5001,
+        "expected_renorm": 0.018073254450844626,
+        "pred_raw_slice": 0.08538433333333334,
+        "pred_renorm": 0.11459599958841661,
+        "abs_err_renorm": 0.09652274513757199
+      }
+    ],
+    "remap_clostridioides": true,
+    "exp_name": "MT 13-mer 250M (C.diff->Clostridium)"
+  }
+}

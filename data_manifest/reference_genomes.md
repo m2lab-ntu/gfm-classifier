@@ -9,20 +9,24 @@
 
 ## Total reference genomes used
 
-- **Training (NT-v2 / MT / DNABERT)**: 2,505 genomes (all 1,535 species, multiple strains some species)
-- **Kraken2 custom DB**: 1,316 species (UMGS + HGR only; the 219 GCF species had no locally available FASTA)
+- **Training (NT-v2 / MT / DNABERT)**: same 1,535 species catalogue (reads simulated from genomes)
+- **Kraken2 custom DB (legacy)**: 1,316 species (UMGS + HGR only; GCF FASTAs were missing at first build)
+- **Kraken2 matched-reference DB (2026-07)**: **1,535 species** (UMGS + HGR + GCF) — fair vs NT/MT
 
 ## Location
 
-- TWCC: `/work/ymj1123ntu/gfm_embedding_classification/data/labeled_multi_level_generated/genomes/` (~10 GB)
-- Local machine (Kraken2 only):
-  - UMGS source: `/mnt/MetaTransformer_data/UMGS/` (1.3 GB, 1,952 `.gz` files)
-  - HGR source: `/mnt/MetaTransformer_data/hgr/` (562 MB, 553 `.gz` files)
-  - Kraken2 DB: `/nas2/hierachical_test/kraken2_db/` (7.2 GB, 1,316 species)
-  - Decompressed `.fna` in DB: `/nas2/hierachical_test/kraken2_db/library/added/`
+- CrucialX9 (authoritative FASTAs for 1,535): `/media/user/CrucialX9/MetaTransformer_data/genomes/`
+  (~2,505 `.fa.gz` stems; labels use 1,535 of them)
+- Taxonomy / maps: `/media/user/CrucialX9/MetaTransformer_data/taxonomy_files/`
+- TWCC (legacy): `/work/ymj1123ntu/gfm_embedding_classification/data/labeled_multi_level_generated/genomes/`
+- Local Kraken2 DBs:
+  - Legacy (1,316): `/nas2/hierachical_test/kraken2_db/`
+  - Matched (1,535): `/nas2/hierachical_test/kraken2_db_1535/` (~9 GB; `k=35`, Bracken 150‑mer)
+- Build script: `scripts/build_kraken2_db_1535.py`
+- Eval pack: `docs/paper_direction_review_2026_07/kraken_matched_1535/`
 
 ## Notes
 
-- The 219 GCF species missing from Kraken2 DB are listed in `small_predictions/missing_species.tsv` (with species_class + n_reads)
-- These species ARE in NT-v2 / MT training data (in-distribution for neural models)
-- The "OOD vs neural" finding is therefore a Kraken2-DB-coverage asymmetry, not generalisation
+- Legacy missing GCF list: `small_predictions/missing_species.tsv` (also under the review pack)
+- Those GCF species **are** in NT/MT training; the old Kraken comparison was a **DB-coverage asymmetry**, fixed by the 1,535 rebuild
+- Taxid convention: `taxid = species_class + 2` (matches `convert_kraken2_preds*.py`)

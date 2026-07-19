@@ -1,0 +1,16 @@
+{
+  "db": "/nas2/hierachical_test/kraken2_db_1535",
+  "n_total": 100000,
+  "n_classified": 100000,
+  "n_unclassified": 0,
+  "classified_rate": 1.0,
+  "top1_all_reads": 0.79625,
+  "top1_classified_only": 0.79625,
+  "gcf_n": 14227,
+  "gcf_classified_rate": 0.9656990229844662,
+  "gcf_top1": 0.9655584452098124,
+  "nongcf_classified_rate": 0.7727606589486202,
+  "nongcf_top1": 0.7681671388432257,
+  "taxid_offset": 2,
+  "kraken2_k": 35
+}

@@ -1,0 +1,43 @@
+{
+  "test_reads_total": 595000,
+  "excluded_reads": 15000,
+  "excluded_pct": 2.521,
+  "clean_reads": 580000,
+  "genera_total": 119,
+  "genera_clean": 116,
+  "genera_removed": [
+    "Cellulomonas",
+    "Finegoldia",
+    "Fusobacterium"
+  ],
+  "excluded_accessions_found": [
+    "GCF_000010185",
+    "GCF_000158275",
+    "GCF_000312005"
+  ],
+  "excluded_accession_read_counts": {
+    "GCF_000010185.1_ASM1018v1": 5000,
+    "GCF_000158275.2_ASM15827v2": 5000,
+    "GCF_000312005.1_ASM31200v1": 5000
+  },
+  "models": {
+    "mt_250M": {
+      "original_correct": 204274,
+      "original_top1_pct": 34.3318,
+      "clean_correct": 189494,
+      "clean_top1_pct": 32.6714
+    },
+    "mt_50M": {
+      "original_correct": 168360,
+      "original_top1_pct": 28.2958,
+      "clean_correct": 156913,
+      "clean_top1_pct": 27.054
+    },
+    "nt_v9": {
+      "original_correct": 156463,
+      "original_top1_pct": 26.2963,
+      "clean_correct": 149706,
+      "clean_top1_pct": 25.8114
+    }
+  }
+}

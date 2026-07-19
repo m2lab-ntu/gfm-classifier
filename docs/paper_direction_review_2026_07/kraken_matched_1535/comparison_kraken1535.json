@@ -1,0 +1,84 @@
+{
+  "full_100K": [
+    {
+      "name": "Kraken2_raw",
+      "n": 100000,
+      "classified_rate": 0.79974,
+      "read_acc_all": 0.79952,
+      "read_acc_classified": 0.9997249105959437,
+      "pearson_r": 0.8322185570114781,
+      "bray_curtis": 0.11129385355662486
+    },
+    {
+      "name": "MT_13mer",
+      "n": 100000,
+      "classified_rate": 1.0,
+      "read_acc_all": 0.94251,
+      "read_acc_classified": 0.94251,
+      "pearson_r": 0.9998392624195189,
+      "bray_curtis": 0.014530000000000005
+    },
+    {
+      "name": "MT_6mer",
+      "n": 100000,
+      "classified_rate": 1.0,
+      "read_acc_all": 0.48757,
+      "read_acc_classified": 0.48757,
+      "pearson_r": 0.9838337691784922,
+      "bray_curtis": 0.16643999999999995
+    },
+    {
+      "name": "NT_v2",
+      "n": 100000,
+      "classified_rate": 1.0,
+      "read_acc_all": 0.67414,
+      "read_acc_classified": 0.67414,
+      "pearson_r": 0.9935568499173227,
+      "bray_curtis": 0.09134999999999999
+    }
+  ],
+  "legacy_in_db_85819": [
+    {
+      "name": "Kraken2_raw",
+      "n": 85819,
+      "classified_rate": 0.7723697549493702,
+      "read_acc_all": 0.7721483587550543,
+      "read_acc_classified": 0.9997133546557239,
+      "pearson_r": 0.8237841519513428,
+      "bray_curtis": 0.12845900475335792
+    },
+    {
+      "name": "MT_13mer",
+      "n": 85819,
+      "classified_rate": 1.0,
+      "read_acc_all": 0.9488574791130169,
+      "read_acc_classified": 0.9488574791130169,
+      "pearson_r": 0.9998641445810483,
+      "bray_curtis": 0.014833545019168259
+    },
+    {
+      "name": "MT_6mer",
+      "n": 85819,
+      "classified_rate": 1.0,
+      "read_acc_all": 0.5148626760973677,
+      "read_acc_classified": 0.5148626760973677,
+      "pearson_r": 0.9869864363727083,
+      "bray_curtis": 0.15236719141448862
+    },
+    {
+      "name": "NT_v2",
+      "n": 85819,
+      "classified_rate": 1.0,
+      "read_acc_all": 0.6968270429625141,
+      "read_acc_classified": 0.6968270429625141,
+      "pearson_r": 0.995197185346329,
+      "bray_curtis": 0.08851186800125846
+    }
+  ],
+  "bracken_full_100K": {
+    "pearson_r": 0.9999760898727956,
+    "bray_curtis": 0.004062757057159472,
+    "reads_unmapped_to_genus": 0.0,
+    "note": "Bracken redistributes the full report; not restricted to legacy mask"
+  }
+}

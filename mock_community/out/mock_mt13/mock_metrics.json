@@ -1,0 +1,10 @@
+{
+  "exp_name": "MT 13-mer 250M",
+  "n_in_set_genera": 11,
+  "out_of_set_expected_fraction": 18.51,
+  "pearson_r_in_set": 0.5453745728723822,
+  "bray_curtis_in_set": 0.343970142683495,
+  "detect_threshold": 0.01,
+  "detection_sensitivity_in_set": 0.7272727272727273,
+  "false_positive_genera": 7
+}
