@@ -1,6 +1,10 @@
 # Project Progress
 
 **Last updated**: 2026-06-01
+> ⚠️ 本檔內容陳舊(2026-06-01 後大量新實驗未反映)。**權威、最新總表見 [`RESULTS_SUMMARY.md`](./RESULTS_SUMMARY.md)**
+> (closed-set / 新基因體泛化 / 真實 mock community / Kraken2 baseline 全部整合);
+> 逐項數字見 [`benchmark_results/THESIS_NUMBERS.md`](./benchmark_results/THESIS_NUMBERS.md);
+> tokenization 機制分析見 [`docs/kmer_lookup_analysis.md`](./docs/kmer_lookup_analysis.md)。
 
 ## Thesis state
 
