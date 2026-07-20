@@ -103,7 +103,7 @@ k-mer classifiers, no neural net, same clean_common test + 50M-read reference:
 - **Corrects earlier "near-lookup" framing** (now retracted): the mechanism is learned high-dim composition, not lookup. Closed-set caveat still holds; novel-genome generalization untested. Full write-up + thesis paragraph: `gfm-classifier/docs/kmer_lookup_analysis.md`.
 
 ## ⏳ Pending / in progress
-- **NT-v2 overlap-6mer**: running on dev resume-chain (159936→939→eval 159940); ~51% @ ep3 and rising, ~86 min/ep so converges slowly. Fills §2 4th cell. Expectation: ≤67% (OOD overlap input on a 6-mer-pretrained model; still 6-mer).
+- **NT-v2 overlap-6mer**: DONE (stale note above removed). Final: ep15/30, val_acc 0.6129, clean_common Top-1 62.2% (RC-TTA) / 61.5% (forward) — see §2 table. Never resumed past ep15 on Taiwania-2 (handoff was prepared, no result ever came back; abandoned in favor of higher-value Track A / real-mock-community work). Confirms ≤67% as expected.
 
 ## Local real-world eval (next phase)
 Handoff package in repo: `gfm-classifier/local_realworld_eval/` (README + environment.yml + this file). Runs on a 4090 (inference only). Track A = new-genome generalization (tests whether 98.7%/67% transfer to unseen genomes of the same 120 genera).
