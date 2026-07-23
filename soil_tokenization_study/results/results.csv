@@ -3,6 +3,8 @@ MetaTransformer,13mer,1,64,5M,0.2051,0.183,fwd,final,967182
 MetaTransformer,13mer,1,64,50M,0.8924,0.894,fwd,final,967730
 MetaTransformer,6mer,1,64,50M,0.2662,0.248,fwd,final,970081
 MetaTransformer,6mer,1,128,50M,0.2881,0.270,fwd,final,970180
+MetaTransformer,6mer,1,64,5M,0.2516,0.231,fwd,final,971958
+MetaTransformer,6mer,1,128,5M,0.2732,0.255,fwd,final,971959
 NTv2-500M+LoRA,6mer,native,1024,5M,0.3097,,fwd,final,968019
 NTv2-500M+LoRA,6mer,native,1024,5M,0.3198,,rc-tta,final,968019
 NTv2-500M+LoRA,6mer,native,1024,50M,0.3886,,fwd,final,970538

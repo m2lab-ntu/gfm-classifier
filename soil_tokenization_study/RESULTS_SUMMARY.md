@@ -17,6 +17,8 @@ the local write-up. **Status date: 2026-07-18.**
 |---|---|---|---|---|---|---|
 | MetaTransformer | 13-mer, stride 1, embed 64 | **5M** | **0.2051** | 0.183 | fwd | ✅ final |
 | MetaTransformer | 13-mer, stride 1, embed 64 | **50M** | **0.8924** | 0.894 | fwd | ✅ final |
+| MetaTransformer | 6-mer, stride 1, embed 64 | **5M** | **0.2516** | 0.231 | fwd | ✅ final |
+| MetaTransformer | 6-mer, stride 1, embed 128 | **5M** | **0.2732** | 0.255 | fwd | ✅ final |
 | MetaTransformer | 6-mer, stride 1, **embed 64** | **50M** | **0.2662** | 0.248 | fwd | ✅ final (⚠ underfits — see §4) |
 | MetaTransformer | 6-mer, stride 1, **embed 128** | **50M** | **0.2881** | 0.270 | fwd | ✅ final |
 | NT-v2-500M + LoRA | 6-mer (non-overlap, native) | **5M** | **0.3097** fwd / **0.3198** RC-TTA | — | fwd/tta | ✅ final |
@@ -36,7 +38,7 @@ the local write-up. **Status date: 2026-07-18.**
 
 | 5M soil, Top-1 | 6-mer | 13-mer |
 |---|---|---|
-| **MetaTransformer** | — | 0.205 |
+| **MetaTransformer** | 0.252 (e64) / 0.273 (e128) | 0.205 |
 | **NT-v2 + LoRA** | 0.310 / 0.320ᵀᵀᴬ | — |
 
 ---
@@ -47,10 +49,16 @@ the local write-up. **Status date: 2026-07-18.**
    (0.27–0.38), regardless of architecture or embedding capacity. The long, specific k-mer is the
    single biggest lever for this task.
 
-2. **The from-scratch full-vocab MT is extremely data-hungry.** MT 13-mer: **5M → 0.205** (catastrophic
-   overfitting: train prec 0.99, val loss diverges to >13; best checkpoint locked in the first ~1000
-   batches) vs **50M → 0.892** (clean, early-stops at epoch 7, no overfit). The 13-mer's power only
-   materialises with enough data.
+2. **Tokenization determines whether more data even helps — the strongest new result.**
+   The data-scale response is **completely different by k-mer length** (MT, embed 64 → embed 128):
+   - **MT 13-mer: extremely data-hungry** — 5M → 0.205 (catastrophic overfitting: train prec 0.99, val
+     loss diverges to >13, best checkpoint locked in the first ~1000 batches) → **50M → 0.892** (+0.69,
+     clean, no overfit). More data unlocks the specific representation.
+   - **MT 6-mer: data-insensitive / saturated** — 5M → 0.252 (e64) / 0.273 (e128) vs 50M → 0.266 / 0.288.
+     A **10× data increase buys only +0.01–0.02.** The 6-mer representation is information-poor enough
+     that it plateaus ~0.25–0.29 regardless of data volume — the bottleneck is the tokenization, not data.
+   → **Long k-mers scale with data; short k-mers don't.** This is a cleaner claim than "MT is data-hungry":
+     *whether a from-scratch model is data-hungry is a property of its tokenization.*
 
 3. **Crossover between pretrained-LoRA and from-scratch as data scales.**
    - **Low data (5M):** NT-v2+LoRA (0.32) **>** MT 13-mer (0.205) — pretraining + LoRA regularisation
@@ -198,10 +206,13 @@ soil_tokenization_study/
 - [ ] (optional) MT RC-TTA to match NT-v2's protocol.
 - [ ] (optional) multi-seed error bars on headline cells.
 
-**All core cells complete.** Full matrix (test_final Top-1):
+**All cells complete.** Full matrix (test_final Top-1):
 
-| | 5M | 50M |
-|---|---|---|
-| MT 13-mer | 0.205 | **0.892** |
-| MT 6-mer (e64 / e128) | — | 0.266 / 0.288 |
-| NT-v2 6-mer (fwd / RC-TTA) | 0.310 / 0.320 | 0.389 / 0.398 |
+| | 5M | 50M | Δ(5M→50M) |
+|---|---|---|---|
+| MT 13-mer | 0.205 | **0.892** | **+0.687** (data-hungry) |
+| MT 6-mer e64 | 0.252 | 0.266 | +0.014 (saturated) |
+| MT 6-mer e128 | 0.273 | 0.288 | +0.015 (saturated) |
+| NT-v2 6-mer (RC-TTA) | 0.320 | 0.398 | +0.078 |
+
+The Δ column is the punchline: 13-mer gains **+0.69** from 10× data, 6-mer gains **~+0.015**.
