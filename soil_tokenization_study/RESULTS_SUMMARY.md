@@ -20,7 +20,7 @@ the local write-up. **Status date: 2026-07-18.**
 | MetaTransformer | 6-mer, stride 1, **embed 64** | **50M** | **0.2662** | 0.248 | fwd | ✅ final (⚠ underfits — see §4) |
 | MetaTransformer | 6-mer, stride 1, **embed 128** | **50M** | **0.2881** | 0.270 | fwd | ✅ final |
 | NT-v2-500M + LoRA | 6-mer (non-overlap, native) | **5M** | **0.3097** fwd / **0.3198** RC-TTA | — | fwd/tta | ✅ final |
-| NT-v2-500M + LoRA | 6-mer (non-overlap, native) | **50M** | *~0.38 (proj.)* | — | fwd/tta | 🟢 running (970084), val 0.364↑ |
+| NT-v2-500M + LoRA | 6-mer (non-overlap, native) | **50M** | **0.3886** fwd / **0.3984** RC-TTA | — | fwd/tta | ✅ final |
 
 **Reference anchors (context, not this study):**
 - MT-full 13-mer (local, full soil data): **0.830** on this same `test_final`.
@@ -32,7 +32,7 @@ the local write-up. **Status date: 2026-07-18.**
 | 50M soil, Top-1 | 6-mer | 13-mer |
 |---|---|---|
 | **MetaTransformer** (from-scratch) | 0.266 (e64) / **0.288** (e128) | **0.892** |
-| **NT-v2 + LoRA** (pretrained) | ~0.38 (running) | — (not run; 13-mer is MT-only) |
+| **NT-v2 + LoRA** (pretrained) | **0.389** fwd / **0.398** RC-TTA | — (not run; 13-mer is MT-only) |
 
 | 5M soil, Top-1 | 6-mer | 13-mer |
 |---|---|---|
@@ -55,13 +55,15 @@ the local write-up. **Status date: 2026-07-18.**
 3. **Crossover between pretrained-LoRA and from-scratch as data scales.**
    - **Low data (5M):** NT-v2+LoRA (0.32) **>** MT 13-mer (0.205) — pretraining + LoRA regularisation
      wins when data is scarce (MT overfits, NT-v2 does not: train_acc ≈ val_acc throughout).
-   - **High data (50M):** MT 13-mer (0.892) **≫** NT-v2 (~0.38) — with enough data the specific
+   - **High data (50M):** MT 13-mer (0.892) **≫** NT-v2 (0.398 RC-TTA) — with enough data the specific
      tokenization + full from-scratch training dominates.
 
-4. **At matched 6-mer tokenization, architecture matters little.** MT-6mer (0.266 e64 / 0.288 e128) and
-   NT-v2-6mer (~0.38) are in the same ballpark and both far below MT-13mer (0.89). The **tokenization
-   ceiling dominates the architecture difference** at 6-mer. (This comparison is inherently fuzzy —
-   NT-v2 is a 500M pretrained model, MT-6mer is ~5M from-scratch — see §4.)
+4. **At matched 6-mer tokenization, architecture matters modestly.** NT-v2-6mer (0.398) beats
+   MT-6mer (0.266 e64 / 0.288 e128) by ~0.11 — pretraining helps at 6-mer — but both are far below
+   MT-13mer (0.892). The **tokenization ceiling dominates the architecture difference** at 6-mer:
+   the best 6-mer model (NT-v2, 0.398) still loses to a from-scratch 13-mer by ~0.49. (This
+   architecture comparison is inherently fuzzy — NT-v2 is a 500M pretrained model, MT-6mer is ~5M
+   from-scratch — see §4.)
 
 5. **6-mer capacity is not the bottleneck on soil — the task granularity is.** Doubling the 6-mer
    embedding (e64 0.266 → e128 0.288) gained only +0.022. The gut 6-mer reached 0.489 at e128, but on an
@@ -192,6 +194,14 @@ soil_tokenization_study/
 ## 8. To finish (running / TODO)
 
 - [x] MT-6mer-e128 50M (job 970180): **done → 0.2881**.
-- [ ] NT-v2-50M (job 970084): finish training (may need one mid-ckpt resume near 48 h) → RC-TTA eval.
+- [x] NT-v2-50M (jobs 968020→970538, 2 mid-ckpt resumes): **done → 0.3886 fwd / 0.3984 RC-TTA** (6 epochs).
 - [ ] (optional) MT RC-TTA to match NT-v2's protocol.
 - [ ] (optional) multi-seed error bars on headline cells.
+
+**All core cells complete.** Full matrix (test_final Top-1):
+
+| | 5M | 50M |
+|---|---|---|
+| MT 13-mer | 0.205 | **0.892** |
+| MT 6-mer (e64 / e128) | — | 0.266 / 0.288 |
+| NT-v2 6-mer (fwd / RC-TTA) | 0.310 / 0.320 | 0.389 / 0.398 |
