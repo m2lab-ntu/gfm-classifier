@@ -42,9 +42,9 @@ data:
 
 # ===== Training =====
 training:
-  batch_size: 256           # per-GPU (256 × 8 GPUs = 2048 effective)
-  eval_batch_size: 512
-  gradient_accumulation_steps: 1
+  batch_size: 64            # per-GPU; V100-32GB (was 256 on H200-80GB)
+  eval_batch_size: 128
+  gradient_accumulation_steps: 4  # 64 × 8 GPUs × 4 = 2048 effective (same as H200)
   num_epochs: 30
   learning_rate: 3.0e-4
   backbone_lr: 2.0e-5
