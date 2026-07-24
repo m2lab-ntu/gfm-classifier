@@ -46,6 +46,7 @@ class TokenLevelGFMClassifier(nn.Module):
         gradient_checkpointing: bool = True,
         backbone_loader: str = "mlm",
         trust_remote_code: bool = True,
+        random_init: bool = False,
     ):
         super().__init__()
 
@@ -57,8 +58,13 @@ class TokenLevelGFMClassifier(nn.Module):
         #   True   — NT-v2 / DNABERT-2 need custom code
         #   False  — DNABERT's custom BertConfig conflicts with stock BertConfig
         #            (ValueError on AutoModel*); it's plain BERT-base anyway
+        # random_init:
+        #   True   — build the SAME architecture (via AutoConfig) but with randomly
+        #            initialized weights, instead of loading pretrained weights.
+        #            Used for the pretraining-ablation control (isolates the
+        #            contribution of pretrained weights vs the architecture itself).
         print(f"Loading backbone: {backbone_name}  (loader={backbone_loader}, "
-              f"trust_remote_code={trust_remote_code})")
+              f"trust_remote_code={trust_remote_code}, random_init={random_init})")
         if backbone_loader == "base":
             # DNABERT-2's bundled Triton flash-attn kernel uses tl.dot(..., trans_b=True)
             # which was removed in Triton >= 3.0. Disable the Triton path so the model
@@ -98,9 +104,19 @@ class TokenLevelGFMClassifier(nn.Module):
                 )
                 _disable_triton_flash_attn()
         else:
-            full_model = AutoModelForMaskedLM.from_pretrained(
-                backbone_name, trust_remote_code=trust_remote_code
-            )
+            if random_init:
+                from transformers import AutoConfig
+                arch_cfg = AutoConfig.from_pretrained(
+                    backbone_name, trust_remote_code=trust_remote_code
+                )
+                full_model = AutoModelForMaskedLM.from_config(
+                    arch_cfg, trust_remote_code=trust_remote_code
+                )
+                print("  Weights: RANDOM INIT (architecture only, no pretrained weights)")
+            else:
+                full_model = AutoModelForMaskedLM.from_pretrained(
+                    backbone_name, trust_remote_code=trust_remote_code
+                )
             # NT-v2 wraps the encoder in .esm, BERT-family (DNABERT) wraps it in .bert
             if hasattr(full_model, "esm"):
                 self.backbone = full_model.esm
@@ -124,12 +140,22 @@ class TokenLevelGFMClassifier(nn.Module):
                 print(f"  Gradient checkpointing: not available ({e})")
 
         # ===== 3. Backbone fine-tune strategy =====
+        if random_init and use_lora:
+            raise ValueError(
+                "random_init=True with use_lora=True doesn't make sense: LoRA adapts "
+                "PRETRAINED knowledge efficiently via a low-rank update, but there is no "
+                "pretrained knowledge to adapt on a randomly-initialized backbone, and the "
+                "low-rank constraint would just cripple capacity. For the pretraining-"
+                "ablation control, set random_init=True with use_lora=False (full fine-tune)."
+            )
         if freeze_backbone:
             for param in self.backbone.parameters():
                 param.requires_grad = False
             print("  Strategy: frozen backbone")
         elif use_lora:
             self._apply_lora(lora_r, lora_alpha, lora_dropout, lora_target_modules)
+        elif random_init:
+            print("  Strategy: full fine-tuning from RANDOM INIT (pretraining-ablation control)")
         else:
             print("  Strategy: full fine-tuning (all params trainable)")
 
@@ -401,5 +427,6 @@ def create_model(cfg: dict, num_classes: int):
             gradient_checkpointing=cfg.get("gradient_checkpointing", True),
             backbone_loader=cfg.get("backbone_loader", "mlm"),
             trust_remote_code=cfg.get("trust_remote_code", True),
+            random_init=cfg.get("random_init", False),
         )
 

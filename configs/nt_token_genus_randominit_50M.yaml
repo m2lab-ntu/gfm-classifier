@@ -1,0 +1,80 @@
+# ============================================================
+# Token-level GFM Classifier — Genus, PRE-TRAINING ABLATION (random-init, 50M)
+# ============================================================
+# Purpose: reviewer-requested control to isolate the contribution of
+# NT-v2's PRETRAINED weights from its ARCHITECTURE. Same 29-layer,
+# ~500M-param NT-v2 architecture as v9, same 50M balanced gut data,
+# same non-overlapping 6-mer tokenizer, same genus (120-class) task —
+# the ONLY difference vs v9 is: backbone weights are randomly
+# initialized (not loaded from InstaDeepAI/nucleotide-transformer-v2-
+# 500m-multi-species), and ALL params are trained (no LoRA).
+# Requires the `random_init` flag added to scripts/model.py (see
+# TokenLevelGFMClassifier / create_model — random_init=True builds the
+# architecture via AutoConfig + AutoModelForMaskedLM.from_config instead
+# of .from_pretrained). Verified end-to-end on CPU (29 layers, hidden
+# 1024, 495.77M trainable params, forward pass OK) — NOT yet trained;
+# no GPU credits available on Nano4 at config-authoring time (2026-07-20).
+#
+# ★ Hyperparameters below (backbone_lr, num_epochs) are BEST-EFFORT
+#   ESTIMATES for training a randomly-initialized 29-layer transformer
+#   from scratch on 50M reads — this exact regime has not been run in
+#   this project before (v13/v14 "scratch" = fresh LoRA/head on a
+#   PRETRAINED backbone, not random-init backbone). Watch the loss
+#   curve on the first few epochs and adjust LR/epochs if it diverges
+#   or plateaus early; do not treat these as validated.
+#
+# ★ Memory: full-parameter fp32 optimizer state alone (weights + grad +
+#   Adam m + Adam v) for ~496M trainable params ≈ 7.9 GB, BEFORE
+#   activations. This is NOT comparable to v9's profiled 8.8GB peak
+#   (that profile was for LoRA — only ~1-2% of params trainable).
+#   Expect meaningfully higher peak memory; verify empirically before
+#   trusting any wall-time/OOM assumption, especially on Taiwania-2 V100
+#   (16/32GB, no BF16 — see taiwania2_continue/README.md Job 4).
+# ============================================================
+
+# ===== Model =====
+model:
+  backbone: "InstaDeepAI/nucleotide-transformer-v2-500m-multi-species"
+  head_type: "attention_pool"
+  head_config:
+    hidden_dim: 512
+    num_attention_heads: 4
+    dropout: 0.15
+  freeze_backbone: false
+  use_lora: false           # full fine-tuning — required, random_init+use_lora is invalid (raises)
+  random_init: true          # ★ the whole point of this config — backbone weights NOT loaded
+  gradient_checkpointing: true
+  trust_remote_code: true
+
+# ===== Data ===== (same reads/labels as v9, current path — v9's old path no longer exists)
+data:
+  fasta_path: "/work/ymj1123ntu/data/reads_50M.fa"
+  labels_path: "/work/ymj1123ntu/data/labels_50M.tsv"
+  val_ratio: 0.1
+  seed: 42
+  max_token_length: 32
+  task: "genus"
+  rc_augment: true
+
+# ===== Training =====
+training:
+  batch_size: 128            # start conservative (full-param, not LoRA); raise after confirming no OOM
+  eval_batch_size: 256
+  gradient_accumulation_steps: 2   # effective batch ~ same order as v9; adjust with batch_size
+  num_epochs: 40              # ★ estimate — random-init likely needs more epochs than v9's 30; monitor and extend/early-stop
+  learning_rate: 5.0e-4       # head LR (same as v9 — head is fresh either way)
+  backbone_lr: 1.0e-4         # ★ estimate — v9 used 3e-5 for LoRA-on-pretrained; random-init from scratch needs a much larger LR to learn at all
+  weight_decay: 0.02
+  warmup_ratio: 0.06          # slightly longer warmup than v9 (0.05) — from-scratch training is less stable early on
+  amp: true
+  max_grad_norm: 1.0           # ★ tighter than v9's 5.0 — random-init deep transformers are more prone to early loss spikes
+  early_stopping_patience: 8   # ★ more patience than v9's 5 — from-scratch convergence may be slower/noisier
+  num_workers: 8
+  label_smoothing: 0.0
+  class_weights: false
+  max_class_weight: 10.0
+  phase1_epochs: 0
+
+# ===== Output =====
+output:
+  dir: "/work/ymj1123ntu/checkpoints/nt_token_genus_randominit_50M"

@@ -87,18 +87,92 @@ Expect early-stop ~ep22-25, val ~60%. Then eval on `clean_common` like the other
 *(The 50M data is shared with NT-v2 50M runs — Taiwania-2 may already have it from the
 original thesis training; transfer only if absent.)*
 
+## Job 4 — Random-init full-finetune NT-v2 @50M (pretraining ablation; HIGH review value, HIGH compute cost)
+Reviewer-requested control to cleanly isolate the contribution of NT-v2's **pretrained
+weights** from its **architecture**. Same 29-layer, ~500M-param NT-v2 architecture, same
+50M balanced gut reads, same non-overlapping 6-mer tokenizer, same genus (120-class) task as
+**v9** (LoRA on pretrained backbone, 67.1% RC-TTA) — the ONLY difference: backbone weights
+are **randomly initialized** (not loaded from the pretrained checkpoint) and **all params
+are trained** (no LoRA). This is a genuinely new regime for this project — v13/v14's
+"scratch" naming means fresh LoRA/head on a *pretrained* backbone, NOT a random-init backbone
+(confirmed 2026-07-20: the only backbone-construction path in `scripts/model.py` was always
+`AutoModelForMaskedLM.from_pretrained`, no random-init option existed until now).
+
+**Code change (already made, verified end-to-end on CPU, needs GPU-side training run):**
+`scripts/model.py` — added a `random_init` flag to `TokenLevelGFMClassifier`/`create_model`.
+When `True`, builds the same architecture via `AutoConfig.from_pretrained(...)` +
+`AutoModelForMaskedLM.from_config(...)` instead of `.from_pretrained(...)` (random weights,
+identical architecture). Raises `ValueError` if `random_init=True` and `use_lora=True`
+together (LoRA on a random backbone is meaningless — no pretrained knowledge to adapt).
+CPU smoke test passed: 29 layers, hidden_size 1024, 495,772,745 trainable params (100%),
+forward pass produces correct `[batch, 120]` logits.
+
+**Config ready:** `configs/nt_token_genus_randominit_50M.yaml` (`use_lora: false,
+random_init: true`, data → `data/reads_50M.fa` + `labels_50M.tsv`).
+
+**★ Hyperparameters are BEST-EFFORT ESTIMATES, not validated** — `backbone_lr: 1.0e-4`
+(vs v9's 3.0e-5 — LoRA-appropriate tiny LR would badly undertrain a random-init backbone),
+`num_epochs: 40` (vs v9's 30 — from-scratch convergence likely slower), `max_grad_norm: 1.0`
+(tighter than v9's 5.0 — random-init deep transformers spike more early on),
+`early_stopping_patience: 8`. **Watch the first few epochs' loss curve and adjust** — there
+is no prior run of this exact regime to calibrate against.
+
+**★ Memory — do NOT assume v9's profiled numbers apply.** v9's profiled peak
+(`benchmark_results/train_speed_summary.csv`, 8.8GB) is for **LoRA** (~1-2% of params
+trainable). Full-parameter fp32 optimizer state alone (weights + grad + Adam m + Adam v) for
+~496M trainable params ≈ **7.9GB before activations**. Start `batch_size: 128` (already
+conservative in the config) and watch for OOM before raising it — especially on V100
+(16/32GB, no BF16; see Job 3's DNABERT-2 caveats for the same V100 constraints).
+
+**Rough wall-time (compute-only reference, NOT validated for this regime):** using the
+existing NT-v2 throughput profile (~1800 reads/sec/GPU, forward/backward FLOPs are similar
+between LoRA and full fine-tune since it's the same architecture) — 8×H200 ≈ 58 min/epoch →
+**~29–39 hours for 30–40 epochs on Nano4 H200s** (moot until Nano4 credits are restored).
+On Taiwania-2 V100 (no BF16, ~1/3–1/5 the raw throughput of H200, likely smaller batch due
+to memory): rough estimate **3–5× longer, i.e. multi-day**. This is a much heavier compute
+ask than any other Job in this handoff — **consider whether it's worth waiting for Nano4
+credits to be restored instead of running the full multi-day job on V100.**
+
+**Transfer from Nano4 (if not already present on Taiwania-2 — check first, v9's OLD data
+path `/work/ymj1123ntu/gfm_embedding_classification/data/balanced_50M/` no longer exists on
+Nano4, so don't assume Taiwania-2 has a stale copy either):**
+| file | Nano4 path | size |
+|---|---|---|
+| 50M reads | `data/reads_50M.fa` | 9.6 GB |
+| 50M labels | `data/labels_50M.tsv` | 3.9 GB |
+
+**Run:** once data is confirmed present at `/work/ymj1123ntu/data/` on Taiwania-2, adapt a
+DDP slurm script (use `slurm/run_nt_genus_v14_250M_ddp_nano4.sh` as a template — swap config
+to `configs/nt_token_genus_randominit_50M.yaml`, output dir to
+`checkpoints/nt_token_genus_randominit_50M`, adjust `-A`/`-p`/node-GPU count to Taiwania-2,
+and note the index-prebuild step in that template is 250M-specific — not needed for 50M).
+
+**Target output:** genus Top-1 (RC-TTA) on `clean_common` (99,742 reads), same protocol as
+v9/v14/etc (`scripts/run_genus_rctta.py`), plus the training curve
+(`training_history.csv` → same `replot_v9_curve.py`-style plot). Compare directly against
+v9's 67.1% to get the clean pretraining-contribution delta the reviewer asked for.
+
 ## Already done (do NOT re-run)
 7 genus settings (v9/v14/v15/gbal/sbal/MT-50M/MT-250M) + MT 6-mer s1/s6 @250M + MT species
 @250M (val ~0.84, qualitative). Numbers in `THESIS_NUMBERS.md` (this repo's
 `local_realworld_eval/` + `benchmark_results/` on Nano4).
 
 ## Priority call
-- **Job 1 (ov6mer)** — cheap (~7 GB), nearly done → finish it.
+- **Job 1 (ov6mer)** — status: stopped at ep15 on Nano4 (62.2%, see
+  `benchmark_results/THESIS_NUMBERS.md` §2), sat untouched for ~2 weeks, then a Taiwania-2/V100
+  config adaptation landed (batch/partition tuning, no results yet) — so it may now be
+  actively resuming there. Check `checkpoints/nt_token_genus_ov6mer_17M/training_history.csv`
+  on Taiwania-2 for current epoch before assuming either "done" or "abandoned".
+- **Job 4 (random-init pretraining ablation)** — directly answers a **reviewer request**
+  (unlike Jobs 1–3, which are internally-motivated confirmatory controls). Highest review
+  value here, but also the **highest compute cost** (multi-day on V100, memory footprint
+  untested) — weigh against waiting for Nano4 credits to restore (H200, ~29–39h estimate)
+  before committing V100 wall-time.
 - **Job 3 (DNABERT-2 @50M)** — cheap (~13 GB), one clean long job → worth it for the extra
   BPE-tokenizer data point (expected ~60%, below NT-v2 6-mer).
 - **Job 2 (NT-v2 species @250M)** — 67 GB transfer for an expected-saturate result → **only if
   you want the symmetric species number**; otherwise skip.
 
-The high-value next step remains the **local real-world eval** (`local_realworld_eval/`), not more
-HPC training. All three jobs above are confirmatory — they sharpen the tokenization table but
+The other high-value non-HPC track is **local real-world eval** (`local_realworld_eval/`).
+Jobs 1–3 are confirmatory — they sharpen the tokenization table but
 don't change the locked main conclusions.
